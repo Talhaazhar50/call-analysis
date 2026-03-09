@@ -1,6 +1,7 @@
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLayout from "./pages/admin/AdminLayout";
 import Login from "./pages/auth/Login";
+import User from "./pages/admin/User";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 function App() {
@@ -10,6 +11,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<User />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
