@@ -93,35 +93,7 @@ export default function Login() {
         flexDirection: 'column',
       }}
     >
-      {/* Top Nav */}
-      <Flex
-        justify="space-between"
-        align="center"
-        px={32}
-        py={14}
-        style={{ borderBottom: '1px solid #f3f4f6' }}
-      >
-        <Flex align="center" gap={8}>
-          <Box
-            style={{
-              width: 28, height: 28, borderRadius: 6,
-              background: BRAND,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            <IconHeadphones size={15} color="#fff" />
-          </Box>
-          <Text style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>
-            CallAnalytics
-          </Text>
-        </Flex>
-        <Text size="sm" style={{ color: '#6b7280' }}>
-          No account?{' '}
-          <Anchor component={Link} to="/register" style={{ color: BRAND, fontWeight: 600 }}>
-            Sign up
-          </Anchor>
-        </Text>
-      </Flex>
+
 
       {/* Center Content */}
       <Flex align="center" justify="center" style={{ flex: 1 }} py={48}>
