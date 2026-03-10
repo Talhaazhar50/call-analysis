@@ -1,339 +1,192 @@
-import {
-    Box, Flex, Text, Title, Grid, Paper,
-    Table, Badge, RingProgress, Group,
-    Stack,
-} from '@mantine/core'
-import {
-    IconPhoneCall, IconStarFilled, IconUsers,
-    IconTrendingUp, IconTrendingDown, IconCircleCheck, IconCircleX,
-} from '@tabler/icons-react'
-import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid,
-    Tooltip, ResponsiveContainer,
-} from 'recharts'
+import { Badge, Box, Flex, Grid, Paper, RingProgress, Text, Title } from "@mantine/core";
+import { IconClipboardCheck, IconPhone, IconTrendingUp, IconUsers } from "@tabler/icons-react";
+import { useOutletContext } from "react-router-dom";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 const BRAND = '#16a34a'
 
-// Mock data
-const stats = [
-    {
-        label: 'Total Calls',
-        value: '1,284',
-        change: '+12%',
-        up: true,
-        icon: IconPhoneCall,
-        color: '#3b82f6',
-        bg: '#eff6ff',
-    },
-    {
-        label: 'Avg Score',
-        value: '78.4%',
-        change: '+3.2%',
-        up: true,
-        icon: IconStarFilled,
-        color: BRAND,
-        bg: '#f0fdf4',
-    },
-    {
-        label: 'Total Agents',
-        value: '48',
-        change: '+4',
-        up: true,
-        icon: IconUsers,
-        color: '#8b5cf6',
-        bg: '#f5f3ff',
-    },
-    {
-        label: 'Pass Rate',
-        value: '71%',
-        change: '-2%',
-        up: false,
-        icon: IconCircleCheck,
-        color: '#f59e0b',
-        bg: '#fffbeb',
-    },
-]
-
-const chartData = [
+const trendData = [
     { month: 'Oct', score: 68 },
     { month: 'Nov', score: 72 },
     { month: 'Dec', score: 69 },
     { month: 'Jan', score: 75 },
     { month: 'Feb', score: 78 },
-    { month: 'Mar', score: 78.4 },
+    { month: 'Mar', score: 84 },
 ]
 
 const recentCalls = [
-    { id: 1, agent: 'Sarah Johnson', scorecard: 'Sales QA', score: 92, status: 'Pass', date: 'Mar 10, 2025' },
-    { id: 2, agent: 'Mark Davis', scorecard: 'Support QA', score: 61, status: 'Fail', date: 'Mar 10, 2025' },
-    { id: 3, agent: 'Emily Chen', scorecard: 'Sales QA', score: 88, status: 'Pass', date: 'Mar 9, 2025' },
-    { id: 4, agent: 'James Wilson', scorecard: 'Onboarding QA', score: 74, status: 'Pass', date: 'Mar 9, 2025' },
-    { id: 5, agent: 'Aisha Patel', scorecard: 'Support QA', score: 55, status: 'Fail', date: 'Mar 8, 2025' },
-    { id: 6, agent: 'Tom Brown', scorecard: 'Sales QA', score: 81, status: 'Pass', date: 'Mar 8, 2025' },
+    { agent: 'Sarah Johnson', initials: 'S', color: BRAND, scorecard: 'Sales QA', score: 92, status: 'passed', date: 'Mar 10, 2025' },
+    { agent: 'Mark Davis', initials: 'M', color: '#2563eb', scorecard: 'Support QA', score: 61, status: 'failed', date: 'Mar 10, 2025' },
+    { agent: 'Emily Chen', initials: 'E', color: '#7c3aed', scorecard: 'Sales QA', score: 88, status: 'passed', date: 'Mar 9, 2025' },
+    { agent: 'Carlos Rivera', initials: 'C', color: '#ea580c', scorecard: 'Support QA', score: 74, status: 'passed', date: 'Mar 9, 2025' },
 ]
 
 export default function AdminDashboard() {
+    const { C } = useOutletContext()
+
+    const stats = [
+        { label: 'Total Calls', value: '1,284', sub: '+12% this month', icon: IconPhone, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+        { label: 'Avg Score', value: '78.4%', sub: '+3.2% this month', icon: IconTrendingUp, color: BRAND, bg: '#f0fdf4', border: '#bbf7d0' },
+        { label: 'Total Agents', value: '48', sub: '+4 this month', icon: IconUsers, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+        { label: 'Pass Rate', value: '71%', sub: '-2% this month', icon: IconClipboardCheck, color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
+    ]
+
+    const thStyle = {
+        fontSize: 11, color: C.subtle, fontWeight: 600,
+        textTransform: 'uppercase', letterSpacing: '0.05em',
+        padding: '10px 16px', textAlign: 'left',
+        background: C.tableTh,
+    }
+    const tdStyle = { padding: '14px 16px', borderTop: `1px solid ${C.border}` }
+
     return (
         <Box>
-            {/* Page Header */}
             <Box mb={28}>
-                <Title
-                    order={2}
-                    style={{ color: '#111827', fontWeight: 700, fontSize: 22, letterSpacing: '-0.3px' }}
-                >
+                <Title order={2} style={{ color: C.text, fontWeight: 700, fontSize: 22, letterSpacing: '-0.3px' }}>
                     Dashboard
                 </Title>
-                <Text style={{ color: '#6b7280', fontSize: 14, marginTop: 4 }}>
+                <Text style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>
                     Overview of your team's call quality performance
                 </Text>
             </Box>
 
             {/* Stat Cards */}
-            <Grid mb={24} gutter={16}>
+            <Grid gutter={16} mb={24}>
                 {stats.map((s) => (
-                    <Grid.Col key={s.label} span={{ base: 12, sm: 6, lg: 3 }}>
-                        <Paper
-                            p={20}
-                            radius={12}
-                            style={{
-                                border: '1px solid #f3f4f6',
-                                background: '#fff',
-                                boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                            }}
-                        >
-                            <Flex justify="space-between" align="flex-start">
-                                <Box>
-                                    <Text style={{ color: '#6b7280', fontSize: 13, marginBottom: 8 }}>
-                                        {s.label}
-                                    </Text>
-                                    <Text style={{ color: '#111827', fontSize: 26, fontWeight: 700, lineHeight: 1 }}>
-                                        {s.value}
-                                    </Text>
-                                    <Flex align="center" gap={4} mt={8}>
-                                        {s.up
-                                            ? <IconTrendingUp size={14} color={BRAND} />
-                                            : <IconTrendingDown size={14} color="#ef4444" />}
-                                        <Text style={{ fontSize: 12, color: s.up ? BRAND : '#ef4444', fontWeight: 500 }}>
-                                            {s.change} this month
-                                        </Text>
-                                    </Flex>
-                                </Box>
-                                <Box
-                                    style={{
-                                        width: 42, height: 42, borderRadius: 10,
-                                        background: s.bg,
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    }}
-                                >
-                                    <s.icon size={20} color={s.color} />
+                    <Grid.Col key={s.label} span={{ base: 6, md: 3 }}>
+                        <Paper p={20} radius={12} style={{ border: `1px solid ${C.border}`, background: C.surface, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                            <Flex justify="space-between" align="flex-start" mb={12}>
+                                <Text style={{ fontSize: 13, color: C.muted, fontWeight: 500 }}>{s.label}</Text>
+                                <Box style={{
+                                    width: 34, height: 34, borderRadius: 9,
+                                    background: s.bg, border: `1px solid ${s.border}`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    <s.icon size={17} color={s.color} />
                                 </Box>
                             </Flex>
+                            <Text style={{ fontSize: 28, fontWeight: 800, color: C.text, letterSpacing: '-1px', lineHeight: 1 }}>
+                                {s.value}
+                            </Text>
+                            <Text style={{ fontSize: 12, color: C.subtle, marginTop: 6 }}>{s.sub}</Text>
                         </Paper>
                     </Grid.Col>
                 ))}
             </Grid>
 
-            {/* Chart + Pass Fail */}
-            <Grid mb={24} gutter={16}>
-
-                {/* Score Trend Chart */}
-                <Grid.Col span={{ base: 12, lg: 8 }}>
-                    <Paper
-                        p={24}
-                        radius={12}
-                        style={{
-                            border: '1px solid #f3f4f6',
-                            background: '#fff',
-                            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                        }}
-                    >
-                        <Text style={{ fontWeight: 600, fontSize: 15, color: '#111827', marginBottom: 4 }}>
-                            Avg Score Trend
-                        </Text>
-                        <Text style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
-                            Last 6 months
-                        </Text>
+            {/* Charts */}
+            <Grid gutter={16} mb={24}>
+                <Grid.Col span={{ base: 12, md: 8 }}>
+                    <Paper p={24} radius={12} style={{ border: `1px solid ${C.border}`, background: C.surface, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                        <Text style={{ fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 4 }}>Avg Score Trend</Text>
+                        <Text style={{ fontSize: 12, color: C.subtle, marginBottom: 20 }}>Last 6 months</Text>
                         <ResponsiveContainer width="100%" height={220}>
-                            <LineChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                                <XAxis
-                                    dataKey="month"
-                                    tick={{ fontSize: 12, fill: '#9ca3af' }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
-                                <YAxis
-                                    domain={[60, 90]}
-                                    tick={{ fontSize: 12, fill: '#9ca3af' }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
+                            <LineChart data={trendData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                                <XAxis dataKey="month" tick={{ fontSize: 11, fill: C.subtle }} axisLine={false} tickLine={false} />
+                                <YAxis domain={[60, 90]} tick={{ fontSize: 11, fill: C.subtle }} axisLine={false} tickLine={false} />
                                 <Tooltip
                                     contentStyle={{
-                                        borderRadius: 8,
-                                        border: '1px solid #f3f4f6',
-                                        fontSize: 13,
+                                        background: C.surface, border: `1px solid ${C.border}`,
+                                        borderRadius: 8, fontSize: 13, color: C.text,
                                     }}
                                 />
-                                <Line
-                                    type="monotone"
-                                    dataKey="score"
-                                    stroke={BRAND}
-                                    strokeWidth={2.5}
-                                    dot={{ fill: BRAND, strokeWidth: 0, r: 4 }}
-                                    activeDot={{ r: 6 }}
-                                />
+                                <Line type="monotone" dataKey="score" stroke={BRAND} strokeWidth={2.5}
+                                    dot={{ fill: BRAND, r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </Paper>
                 </Grid.Col>
 
-                {/* Pass / Fail */}
-                <Grid.Col span={{ base: 12, lg: 4 }}>
-                    <Paper
-                        p={24}
-                        radius={12}
-                        style={{
-                            border: '1px solid #f3f4f6',
-                            background: '#fff',
-                            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                            height: '100%',
-                        }}
-                    >
-                        <Text style={{ fontWeight: 600, fontSize: 15, color: '#111827', marginBottom: 4 }}>
-                            Pass / Fail Rate
-                        </Text>
-                        <Text style={{ fontSize: 13, color: '#9ca3af', marginBottom: 24 }}>
-                            This month
-                        </Text>
-                        <Flex justify="center" mb={24}>
-                            <RingProgress
-                                size={160}
-                                thickness={16}
-                                roundCaps
+                <Grid.Col span={{ base: 12, md: 4 }}>
+                    <Paper p={24} radius={12} style={{ border: `1px solid ${C.border}`, background: C.surface, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', height: '100%' }}>
+                        <Text style={{ fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 4 }}>Pass / Fail Rate</Text>
+                        <Text style={{ fontSize: 12, color: C.subtle, marginBottom: 16 }}>This month</Text>
+                        <Flex direction="column" align="center">
+                            <RingProgress size={160} thickness={16} roundCaps
                                 sections={[
                                     { value: 71, color: BRAND },
-                                    { value: 29, color: '#fee2e2' },
+                                    { value: 29, color: '#fca5a5' },
                                 ]}
                                 label={
                                     <Box style={{ textAlign: 'center' }}>
-                                        <Text style={{ fontSize: 22, fontWeight: 800, color: '#111827' }}>71%</Text>
-                                        <Text style={{ fontSize: 11, color: '#9ca3af' }}>Pass Rate</Text>
+                                        <Text style={{ fontSize: 22, fontWeight: 800, color: C.text }}>71%</Text>
+                                        <Text style={{ fontSize: 11, color: C.subtle }}>Pass Rate</Text>
                                     </Box>
                                 }
                             />
+                            <Box mt={16} style={{ width: '100%' }}>
+                                {[
+                                    { label: 'Passed', value: '912 calls', color: BRAND },
+                                    { label: 'Failed', value: '372 calls', color: '#fca5a5' },
+                                ].map((r) => (
+                                    <Flex key={r.label} justify="space-between" align="center" mb={8}>
+                                        <Flex align="center" gap={8}>
+                                            <Box style={{ width: 10, height: 10, borderRadius: 3, background: r.color }} />
+                                            <Text style={{ fontSize: 13, color: C.muted }}>{r.label}</Text>
+                                        </Flex>
+                                        <Text style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{r.value}</Text>
+                                    </Flex>
+                                ))}
+                            </Box>
                         </Flex>
-                        <Stack gap={10}>
-                            <Flex justify="space-between" align="center">
-                                <Flex align="center" gap={8}>
-                                    <Box style={{ width: 10, height: 10, borderRadius: 2, background: BRAND }} />
-                                    <Text style={{ fontSize: 13, color: '#374151' }}>Passed</Text>
-                                </Flex>
-                                <Text style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>912 calls</Text>
-                            </Flex>
-                            <Flex justify="space-between" align="center">
-                                <Flex align="center" gap={8}>
-                                    <Box style={{ width: 10, height: 10, borderRadius: 2, background: '#fca5a5' }} />
-                                    <Text style={{ fontSize: 13, color: '#374151' }}>Failed</Text>
-                                </Flex>
-                                <Text style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>372 calls</Text>
-                            </Flex>
-                        </Stack>
                     </Paper>
                 </Grid.Col>
             </Grid>
 
-            {/* Recent Calls Table */}
-            <Paper
-                radius={12}
-                style={{
-                    border: '1px solid #f3f4f6',
-                    background: '#fff',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                    overflow: 'hidden',
-                }}
-            >
-                <Box px={24} py={18} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <Text style={{ fontWeight: 600, fontSize: 15, color: '#111827' }}>
-                        Recent Calls
-                    </Text>
-                    <Text style={{ fontSize: 13, color: '#9ca3af', marginTop: 2 }}>
-                        Latest analyzed calls across all agents
-                    </Text>
+            {/* Recent Calls */}
+            <Paper radius={12} style={{ border: `1px solid ${C.border}`, background: C.surface, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                <Box px={20} py={16} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <Text style={{ fontWeight: 700, fontSize: 15, color: C.text }}>Recent Calls</Text>
+                    <Text style={{ fontSize: 12, color: C.subtle, marginTop: 2 }}>Latest analyzed calls across all agents</Text>
                 </Box>
-                <Table highlightOnHover>
-                    <Table.Thead>
-                        <Table.Tr style={{ background: '#f9fafb' }}>
-                            {['Agent', 'Scorecard', 'Score', 'Status', 'Date'].map((h) => (
-                                <Table.Th
-                                    key={h}
-                                    style={{
-                                        fontSize: 12, color: '#6b7280', fontWeight: 600,
-                                        textTransform: 'uppercase', letterSpacing: '0.05em', padding: '12px 20px'
-                                    }}
-                                >
-                                    {h}
-                                </Table.Th>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                        <tr>
+                            {['Agent', 'Scorecard', 'Score', 'Status', 'Date'].map(h => (
+                                <th key={h} style={thStyle}>{h}</th>
                             ))}
-                        </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
+                        </tr>
+                    </thead>
+                    <tbody>
                         {recentCalls.map((call) => (
-                            <Table.Tr key={call.id}>
-                                <Table.Td style={{ padding: '14px 20px' }}>
+                            <tr key={call.agent}
+                                onMouseEnter={(e) => e.currentTarget.style.background = C.hover}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                            >
+                                <td style={tdStyle}>
                                     <Flex align="center" gap={10}>
-                                        <Box
-                                            style={{
-                                                width: 32, height: 32, borderRadius: '50%',
-                                                background: '#f0fdf4',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                flexShrink: 0,
-                                            }}
-                                        >
-                                            <Text style={{ fontSize: 12, fontWeight: 700, color: BRAND }}>
-                                                {call.agent.charAt(0)}
-                                            </Text>
+                                        <Box style={{
+                                            width: 30, height: 30, borderRadius: '50%',
+                                            background: call.color + '20', border: `1.5px solid ${call.color}40`,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <Text style={{ fontSize: 11, fontWeight: 700, color: call.color }}>{call.initials}</Text>
                                         </Box>
-                                        <Text style={{ fontSize: 14, color: '#111827', fontWeight: 500 }}>
-                                            {call.agent}
-                                        </Text>
+                                        <Text style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{call.agent}</Text>
                                     </Flex>
-                                </Table.Td>
-                                <Table.Td style={{ padding: '14px 20px' }}>
-                                    <Text style={{ fontSize: 13, color: '#6b7280' }}>{call.scorecard}</Text>
-                                </Table.Td>
-                                <Table.Td style={{ padding: '14px 20px' }}>
-                                    <Text
-                                        style={{
-                                            fontSize: 14, fontWeight: 600,
-                                            color: call.score >= 70 ? BRAND : '#ef4444',
-                                        }}
-                                    >
+                                </td>
+                                <td style={tdStyle}><Text style={{ fontSize: 13, color: C.muted }}>{call.scorecard}</Text></td>
+                                <td style={tdStyle}>
+                                    <Text style={{ fontSize: 13, fontWeight: 700, color: call.score >= 70 ? BRAND : '#dc2626' }}>
                                         {call.score}%
                                     </Text>
-                                </Table.Td>
-                                <Table.Td style={{ padding: '14px 20px' }}>
-                                    <Badge
-                                        radius={6}
-                                        style={{
-                                            background: call.status === 'Pass' ? '#f0fdf4' : '#fef2f2',
-                                            color: call.status === 'Pass' ? BRAND : '#ef4444',
-                                            border: `1px solid ${call.status === 'Pass' ? '#bbf7d0' : '#fecaca'}`,
-                                            fontWeight: 600, fontSize: 12,
-                                        }}
-                                    >
-                                        {call.status === 'Pass'
-                                            ? <Flex align="center" gap={4}><IconCircleCheck size={12} />{call.status}</Flex>
-                                            : <Flex align="center" gap={4}><IconCircleX size={12} />{call.status}</Flex>}
+                                </td>
+                                <td style={tdStyle}>
+                                    <Badge radius={6} style={{
+                                        background: call.status === 'passed' ? '#f0fdf4' : '#fef2f2',
+                                        color: call.status === 'passed' ? BRAND : '#dc2626',
+                                        border: `1px solid ${call.status === 'passed' ? '#bbf7d0' : '#fecaca'}`,
+                                        fontWeight: 600, fontSize: 11,
+                                    }}>
+                                        {call.status === 'passed' ? '✓ PASS' : '✗ FAIL'}
                                     </Badge>
-                                </Table.Td>
-                                <Table.Td style={{ padding: '14px 20px' }}>
-                                    <Text style={{ fontSize: 13, color: '#9ca3af' }}>{call.date}</Text>
-                                </Table.Td>
-                            </Table.Tr>
+                                </td>
+                                <td style={tdStyle}><Text style={{ fontSize: 13, color: C.subtle }}>{call.date}</Text></td>
+                            </tr>
                         ))}
-                    </Table.Tbody>
-                </Table>
+                    </tbody>
+                </table>
             </Paper>
         </Box>
     )

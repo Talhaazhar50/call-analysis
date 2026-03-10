@@ -3,7 +3,7 @@ import { useOutletContext } from "react-router-dom";
 
 import {
     Box, Flex, Text, Title, Button, Paper, Stack,
-    TextInput, Select, Switch, Divider, Modal, Slider, Badge, ActionIcon,
+    TextInput, Select, Switch, Divider, Modal, Slider, Badge,
 } from '@mantine/core'
 import {
     IconBuilding, IconBell, IconShield, IconAlertTriangle,
@@ -71,60 +71,131 @@ export default function Settings() {
 
     const inputStyles = {
         label: { fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 6 },
-        input: { background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: 8, height: 42, fontSize: 14 },
+        input: {
+            background: C.inputBg,
+            border: `1px solid ${C.inputBorder}`,
+            color: C.text,
+            borderRadius: 8,
+            height: 42,
+            fontSize: 14,
+        },
+        placeholder: { color: C.subtle },
     }
 
-    const cardStyle = { border: `1px solid ${C.border}`, background: C.surface, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }
+    const cardStyle = {
+        border: `1px solid ${C.border}`,
+        background: C.surface,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+    }
+
+    const modalStyles = {
+        content: { background: C.surface, border: `1px solid ${C.border}` },
+        header: { background: C.surface, borderBottom: `1px solid ${C.border}` },
+    }
 
     return (
         <Box>
+            {/* Header */}
             <Flex justify="space-between" align="flex-start" mb={24} style={{ flexWrap: 'wrap', gap: 12 }}>
                 <Box>
-                    <Title order={2} style={{ color: C.text, fontWeight: 700, fontSize: 22, letterSpacing: '-0.3px' }}>Settings</Title>
-                    <Text style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>Manage your platform preferences and configuration</Text>
+                    <Title order={2} style={{ color: C.text, fontWeight: 700, fontSize: 22, letterSpacing: '-0.3px' }}>
+                        Settings
+                    </Title>
+                    <Text style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>
+                        Manage your platform preferences and configuration
+                    </Text>
                 </Box>
-                <Button leftSection={saved ? <IconCheck size={15} /> : null} radius={8} onClick={handleSave}
+                <Button
+                    leftSection={saved ? <IconCheck size={15} /> : null}
+                    radius={8} onClick={handleSave}
                     style={{
-                        background: saved ? (C.hover) : BRAND,
+                        background: saved ? C.hover : BRAND,
                         color: saved ? BRAND : '#fff',
-                        border: saved ? `1px solid #bbf7d0` : 'none',
+                        border: saved ? '1px solid #bbf7d0' : 'none',
                         fontWeight: 600, fontSize: 14, height: 40, transition: 'all 0.2s',
-                    }}>
+                    }}
+                >
                     {saved ? 'Saved!' : 'Save Changes'}
                 </Button>
             </Flex>
 
             <Stack gap={20}>
 
-                {/* General */}
+                {/* ── General ── */}
                 <Paper p={24} radius={12} style={cardStyle}>
                     <SectionHeader icon={IconBuilding} title="General" description="Basic platform and company information" C={C} />
                     <Stack gap={16}>
                         <Flex gap={16} style={{ flexWrap: 'wrap' }}>
-                            <TextInput label="Platform Name" value={platformName} onChange={(e) => setPlatformName(e.target.value)} style={{ flex: 1, minWidth: 200 }} styles={inputStyles} />
-                            <TextInput label="Company Name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} style={{ flex: 1, minWidth: 200 }} styles={inputStyles} />
+                            <TextInput
+                                label="Platform Name"
+                                placeholder="e.g. CallAnalytics"
+                                value={platformName}
+                                onChange={(e) => setPlatformName(e.target.value)}
+                                style={{ flex: 1, minWidth: 200 }}
+                                styles={inputStyles}
+                            />
+                            <TextInput
+                                label="Company Name"
+                                placeholder="e.g. Acme Corp"
+                                value={companyName}
+                                onChange={(e) => setCompanyName(e.target.value)}
+                                style={{ flex: 1, minWidth: 200 }}
+                                styles={inputStyles}
+                            />
                         </Flex>
                         <Flex gap={16} style={{ flexWrap: 'wrap' }}>
-                            <Select label="Timezone" value={timezone} onChange={(v) => setTimezone(v || 'UTC')} style={{ flex: 1, minWidth: 200 }} styles={inputStyles}
+                            <Select
+                                label="Timezone"
+                                placeholder="Select timezone"
+                                value={timezone}
+                                onChange={(v) => setTimezone(v || 'UTC')}
+                                style={{ flex: 1, minWidth: 200 }}
+                                styles={inputStyles}
                                 data={[
                                     { value: 'UTC', label: 'UTC' },
                                     { value: 'America/New_York', label: 'Eastern Time (ET)' },
+                                    { value: 'America/Chicago', label: 'Central Time (CT)' },
+                                    { value: 'America/Denver', label: 'Mountain Time (MT)' },
                                     { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
                                     { value: 'Europe/London', label: 'London (GMT)' },
+                                    { value: 'Europe/Paris', label: 'Paris (CET)' },
                                     { value: 'Asia/Karachi', label: 'Karachi (PKT)' },
                                     { value: 'Asia/Dubai', label: 'Dubai (GST)' },
-                                ]} />
-                            <Select label="Date Format" value={dateFormat} onChange={(v) => setDateFormat(v || 'MM/DD/YYYY')} style={{ flex: 1, minWidth: 200 }} styles={inputStyles}
-                                data={[{ value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' }, { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY' }, { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' }]} />
+                                ]}
+                            />
+                            <Select
+                                label="Date Format"
+                                placeholder="Select format"
+                                value={dateFormat}
+                                onChange={(v) => setDateFormat(v || 'MM/DD/YYYY')}
+                                style={{ flex: 1, minWidth: 200 }}
+                                styles={inputStyles}
+                                data={[
+                                    { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' },
+                                    { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY' },
+                                    { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
+                                ]}
+                            />
                         </Flex>
+
+                        {/* Logo Upload */}
                         <Box>
-                            <Text style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 8 }}>Company Logo</Text>
+                            <Text style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 8 }}>
+                                Company Logo
+                            </Text>
                             <Flex align="center" gap={14}>
-                                <Box style={{ width: 52, height: 52, borderRadius: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Box style={{
+                                    width: 52, height: 52, borderRadius: 12,
+                                    background: '#f0fdf4', border: '1px solid #bbf7d0',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
                                     <Text style={{ fontWeight: 800, fontSize: 18, color: BRAND }}>A</Text>
                                 </Box>
                                 <Button variant="default" radius={8} leftSection={<IconUpload size={14} />}
-                                    style={{ border: `1px solid ${C.inputBorder}`, color: C.text, fontWeight: 500, fontSize: 13, height: 38, background: C.inputBg }}>
+                                    style={{
+                                        border: `1px solid ${C.inputBorder}`, color: C.text,
+                                        fontWeight: 500, fontSize: 13, height: 38, background: C.inputBg,
+                                    }}>
                                     Upload Logo
                                 </Button>
                                 <Text style={{ fontSize: 12, color: C.subtle }}>PNG or SVG, max 2MB</Text>
@@ -133,7 +204,7 @@ export default function Settings() {
                     </Stack>
                 </Paper>
 
-                {/* Scoring & AI */}
+                {/* ── Scoring & AI ── */}
                 <Paper p={24} radius={12} style={cardStyle}>
                     <SectionHeader icon={IconBrain} title="Scoring & AI" description="Configure how calls are scored and analyzed" C={C} />
                     <Stack gap={20}>
@@ -141,31 +212,74 @@ export default function Settings() {
                             <Flex justify="space-between" align="center" mb={12}>
                                 <Box>
                                     <Text style={{ fontSize: 14, fontWeight: 500, color: C.text }}>Pass Threshold</Text>
-                                    <Text style={{ fontSize: 12, color: C.subtle, marginTop: 2 }}>Minimum score required to pass a call</Text>
+                                    <Text style={{ fontSize: 12, color: C.subtle, marginTop: 2 }}>
+                                        Minimum score required to pass a call
+                                    </Text>
                                 </Box>
-                                <Badge radius={8} style={{ background: '#f0fdf4', color: BRAND, border: '1px solid #bbf7d0', fontWeight: 800, fontSize: 16, padding: '4px 14px' }}>
+                                <Badge radius={8} style={{
+                                    background: '#f0fdf4', color: BRAND,
+                                    border: '1px solid #bbf7d0',
+                                    fontWeight: 800, fontSize: 16, padding: '4px 14px',
+                                }}>
                                     {passThreshold}%
                                 </Badge>
                             </Flex>
-                            <Slider value={passThreshold} onChange={setPassThreshold} min={50} max={95} step={5} color="green"
-                                marks={[{ value: 50, label: '50%' }, { value: 70, label: '70%' }, { value: 95, label: '95%' }]}
-                                styles={{ mark: { fontSize: 11, color: C.subtle }, markLabel: { fontSize: 11, color: C.subtle } }} mb={8} />
+                            <Slider
+                                value={passThreshold} onChange={setPassThreshold}
+                                min={50} max={95} step={5} color="green"
+                                marks={[
+                                    { value: 50, label: '50%' },
+                                    { value: 70, label: '70%' },
+                                    { value: 95, label: '95%' },
+                                ]}
+                                styles={{
+                                    mark: { fontSize: 11, color: C.subtle },
+                                    markLabel: { fontSize: 11, color: C.subtle },
+                                }}
+                                mb={8}
+                            />
                         </Box>
+
                         <Divider style={{ borderColor: C.border }} />
+
                         <SettingRow label="Auto-Analyze on Upload" description="Automatically score calls when uploaded by agents" C={C}>
                             <Switch checked={autoAnalyze} onChange={() => setAutoAnalyze(p => !p)} color="green" size="md" />
                         </SettingRow>
+
                         <Divider style={{ borderColor: C.border }} />
+
                         <Flex gap={16} style={{ flexWrap: 'wrap' }}>
-                            <Select label="AI Model" value={aiModel} onChange={(v) => setAiModel(v || 'claude')} style={{ flex: 1, minWidth: 200 }} styles={inputStyles}
-                                data={[{ value: 'claude', label: 'Claude (Anthropic)' }, { value: 'gpt4', label: 'GPT-4 (OpenAI)' }, { value: 'gpt35', label: 'GPT-3.5 Turbo' }]} />
-                            <Select label="Score Rounding" value={scoreRounding} onChange={(v) => setScoreRounding(v || 'whole')} style={{ flex: 1, minWidth: 200 }} styles={inputStyles}
-                                data={[{ value: 'whole', label: 'Whole numbers (78%)' }, { value: 'decimal1', label: 'One decimal (78.4%)' }, { value: 'decimal2', label: 'Two decimals (78.42%)' }]} />
+                            <Select
+                                label="AI Model"
+                                placeholder="Select model"
+                                value={aiModel}
+                                onChange={(v) => setAiModel(v || 'claude')}
+                                style={{ flex: 1, minWidth: 200 }}
+                                styles={inputStyles}
+                                data={[
+                                    { value: 'claude', label: 'Claude (Anthropic)' },
+                                    { value: 'gpt4', label: 'GPT-4 (OpenAI)' },
+                                    { value: 'gpt35', label: 'GPT-3.5 Turbo' },
+                                ]}
+                            />
+                            <Select
+                                label="Score Rounding"
+                                placeholder="Select rounding"
+                                value={scoreRounding}
+                                onChange={(v) => setScoreRounding(v || 'whole')}
+                                style={{ flex: 1, minWidth: 200 }}
+                                styles={inputStyles}
+                                data={[
+                                    { value: 'whole', label: 'Whole numbers (78%)' },
+                                    { value: 'decimal1', label: 'One decimal (78.4%)' },
+                                    { value: 'decimal2', label: 'Two decimals (78.42%)' },
+                                ]}
+                            />
                         </Flex>
                     </Stack>
                 </Paper>
 
-                {/* Notifications */}
+                {/* ── Notifications ── */}
                 <Paper p={24} radius={12} style={cardStyle}>
                     <SectionHeader icon={IconBell} title="Notifications" description="Control what email alerts are sent and to whom" C={C} />
                     <Stack gap={16}>
@@ -185,13 +299,25 @@ export default function Settings() {
                     </Stack>
                 </Paper>
 
-                {/* Security */}
+                {/* ── Security ── */}
                 <Paper p={24} radius={12} style={cardStyle}>
                     <SectionHeader icon={IconShield} title="Security" description="Authentication and session management" C={C} />
                     <Stack gap={16}>
-                        <Select label="Session Timeout" value={sessionTimeout} onChange={(v) => setSessionTimeout(v || '8h')}
-                            style={{ maxWidth: 240 }} styles={inputStyles}
-                            data={[{ value: '1h', label: '1 hour' }, { value: '4h', label: '4 hours' }, { value: '8h', label: '8 hours' }, { value: '24h', label: '24 hours' }, { value: 'never', label: 'Never' }]} />
+                        <Select
+                            label="Session Timeout"
+                            placeholder="Select timeout"
+                            value={sessionTimeout}
+                            onChange={(v) => setSessionTimeout(v || '8h')}
+                            style={{ maxWidth: 240 }}
+                            styles={inputStyles}
+                            data={[
+                                { value: '1h', label: '1 hour' },
+                                { value: '4h', label: '4 hours' },
+                                { value: '8h', label: '8 hours' },
+                                { value: '24h', label: '24 hours' },
+                                { value: 'never', label: 'Never' },
+                            ]}
+                        />
                         <Divider style={{ borderColor: C.border }} />
                         <SettingRow label="Require 2FA for Admins" description="Admins must verify with a code on every login" C={C}>
                             <Switch checked={require2FA} onChange={() => setRequire2FA(p => !p)} color="green" size="md" />
@@ -203,8 +329,8 @@ export default function Settings() {
                     </Stack>
                 </Paper>
 
-                {/* Danger Zone */}
-                <Paper p={24} radius={12} style={{ border: `1px solid #fecaca`, background: C.surface, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                {/* ── Danger Zone ── */}
+                <Paper p={24} radius={12} style={{ border: '1px solid #fecaca', background: C.surface, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                     <SectionHeader icon={IconAlertTriangle} title="Danger Zone" description="Irreversible actions — proceed with caution" C={C} danger />
                     <Stack gap={0}>
                         {[
@@ -220,7 +346,10 @@ export default function Settings() {
                                     </Box>
                                     <Button variant="default" radius={8} leftSection={<action.icon size={14} />}
                                         onClick={() => setDangerModal(action)}
-                                        style={{ border: '1px solid #fecaca', color: '#dc2626', fontWeight: 600, fontSize: 13, height: 36, background: C.surface }}>
+                                        style={{
+                                            border: '1px solid #fecaca', color: '#dc2626',
+                                            fontWeight: 600, fontSize: 13, height: 36, background: C.surface,
+                                        }}>
                                         {action.label}
                                     </Button>
                                 </Flex>
@@ -233,26 +362,32 @@ export default function Settings() {
             </Stack>
 
             {/* Danger Confirm Modal */}
-            <Modal opened={!!dangerModal} onClose={() => setDangerModal(null)} centered radius={12} size="sm"
-                overlayProps={{ blur: 2 }}
-                styles={{ content: { background: C.surface, border: `1px solid ${C.border}` }, header: { background: C.surface, borderBottom: `1px solid ${C.border}` } }}
+            <Modal
+                opened={!!dangerModal} onClose={() => setDangerModal(null)}
+                centered radius={12} size="sm" overlayProps={{ blur: 2 }}
+                styles={modalStyles}
                 title={
                     <Flex align="center" gap={8}>
                         <IconAlertTriangle size={18} color="#dc2626" />
-                        <Text style={{ fontWeight: 700, fontSize: 16, color: '#dc2626' }}>Confirm: {dangerModal?.label}</Text>
+                        <Text style={{ fontWeight: 700, fontSize: 16, color: '#dc2626' }}>
+                            Confirm: {dangerModal?.label}
+                        </Text>
                     </Flex>
                 }
             >
                 <Stack gap={16}>
                     <Text style={{ fontSize: 14, color: C.text, lineHeight: 1.6 }}>
-                        Are you sure you want to <strong>{dangerModal?.label.toLowerCase()}</strong>? This action <strong>cannot be undone</strong>.
+                        Are you sure you want to <strong>{dangerModal?.label.toLowerCase()}</strong>?
+                        This action <strong>cannot be undone</strong>.
                     </Text>
                     <Paper p={12} radius={8} style={{ background: '#fef2f2', border: '1px solid #fecaca' }}>
                         <Text style={{ fontSize: 13, color: '#dc2626' }}>{dangerModal?.description}</Text>
                     </Paper>
                     <Flex gap={10} justify="flex-end">
                         <Button variant="default" radius={8} onClick={() => setDangerModal(null)}
-                            style={{ border: `1px solid ${C.inputBorder}`, color: C.text, fontWeight: 500, background: C.inputBg }}>Cancel</Button>
+                            style={{ border: `1px solid ${C.inputBorder}`, color: C.text, fontWeight: 500, background: C.inputBg }}>
+                            Cancel
+                        </Button>
                         <Button radius={8} onClick={() => setDangerModal(null)}
                             style={{ background: '#dc2626', color: '#fff', fontWeight: 600, border: 'none' }}>
                             Yes, {dangerModal?.label}
