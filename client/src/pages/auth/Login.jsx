@@ -1,18 +1,11 @@
 import { IconBrandApple, IconBrandGoogle, IconBrandWindows, IconBuilding, IconFingerprint, IconHeadphones } from "@tabler/icons-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 import {
-  TextInput,
-  Button,
-  Title,
-  Text,
-  Stack,
-  Box,
-  Anchor,
-  Flex,
-  Divider,
-  PinInput,
+  TextInput, Button, Title, Text, Stack, Box,
+  Anchor, Flex, Divider, PinInput,
 } from '@mantine/core'
 
 const BRAND = '#16a34a'
@@ -27,10 +20,13 @@ const socialButtons = [
 
 export default function Login() {
   const navigate = useNavigate()
-  const [step, setStep] = useState('email') // 'email' | 'code'
+  const { sendCode, verifyCode } = useAuth()
+
+  const [step, setStep] = useState('email')
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [resendTimer, setResendTimer] = useState(0)
 
   const startResendTimer = () => {
@@ -45,80 +41,72 @@ export default function Login() {
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault()
+    if (!email) return setError('Please enter your email')
     setLoading(true)
-    // TODO: call POST /api/auth/send-code
-    setTimeout(() => {
-      setLoading(false)
+    setError('')
+    try {
+      await sendCode(email)
       setStep('code')
       startResendTimer()
-    }, 1000)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to send code')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleCodeSubmit = async (e) => {
     e.preventDefault()
+    if (!code || code.length < 6) return setError('Please enter the 6-digit code')
     setLoading(true)
-    // TODO: call POST /api/auth/verify-code
-    setTimeout(() => {
+    setError('')
+    try {
+      const user = await verifyCode(email, code)
+      navigate(user.role === 'admin' ? '/admin' : '/dashboard', { replace: true })
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid code')
+    } finally {
       setLoading(false)
-      navigate('/dashboard')
-    }, 1000)
+    }
   }
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (resendTimer > 0) return
-    // TODO: call POST /api/auth/send-code again
-    startResendTimer()
+    try {
+      await sendCode(email)
+      startResendTimer()
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to resend code')
+    }
   }
 
   const inputStyles = {
     label: { color: '#374151', fontSize: 13, fontWeight: 500, marginBottom: 6 },
     input: {
-      background: '#fff',
-      border: '1px solid #e5e7eb',
-      color: '#111827',
-      borderRadius: 8,
-      height: 42,
-      fontSize: 14,
+      background: '#fff', border: '1px solid #e5e7eb',
+      color: '#111827', borderRadius: 8, height: 42, fontSize: 14,
       '&:focus': { borderColor: BRAND, boxShadow: '0 0 0 3px rgba(22,163,74,0.08)' },
       '&::placeholder': { color: '#9ca3af' },
     },
   }
 
   return (
-    <Box
-      style={{
-        minHeight: '100vh',
-        background: '#ffffff',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <Box style={{ minHeight: '100vh', background: '#ffffff', display: 'flex', flexDirection: 'column' }}>
 
-
-      {/* Center Content */}
       <Flex align="center" justify="center" style={{ flex: 1 }} py={48}>
         <Box style={{ width: '100%', maxWidth: 420, padding: '0 24px' }}>
 
           {/* Logo + Title */}
           <Box mb={28} style={{ textAlign: 'center' }}>
-            <Box
-              style={{
-                width: 48, height: 48, borderRadius: 12,
-                background: '#f0fdf4',
-                border: '1px solid #bbf7d0',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 16px',
-              }}
-            >
+            <Box style={{
+              width: 48, height: 48, borderRadius: 12,
+              background: '#f0fdf4', border: '1px solid #bbf7d0',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px',
+            }}>
               <IconHeadphones size={24} color={BRAND} />
             </Box>
-            <Title
-              order={2}
-              style={{
-                color: '#111827', fontSize: 26,
-                fontWeight: 700, letterSpacing: '-0.5px', marginBottom: 6,
-              }}
-            >
+            <Title order={2} style={{ color: '#111827', fontSize: 26, fontWeight: 700, letterSpacing: '-0.5px', marginBottom: 6 }}>
               {step === 'email' ? 'Log in to CallAnalytics' : 'Check your inbox'}
             </Title>
             <Text style={{ color: '#6b7280', fontSize: 14 }}>
@@ -130,100 +118,44 @@ export default function Login() {
 
           {step === 'email' && (
             <>
-              {/* Social Login Blocks */}
-              <Text size="xs" ta="center" style={{ color: '#9ca3af', marginBottom: 12 }}>
-                Log in with
-              </Text>
+              <Text size="xs" ta="center" style={{ color: '#9ca3af', marginBottom: 12 }}>Log in with</Text>
 
-              {/* Top row — 3 buttons */}
               <Flex gap={10} mb={10}>
                 {socialButtons.slice(0, 3).map((s) => (
-                  <Button
-                    key={s.label}
-                    fullWidth
-                    variant="default"
-                    radius={8}
-                    style={{
-                      border: '1px solid #e5e7eb',
-                      background: '#fff',
-                      color: '#374151',
-                      fontWeight: 500,
-                      fontSize: 13,
-                      height: 52,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4,
-                    }}
-                  >
-                    <s.icon size={20} />
-                    <span>{s.label}</span>
+                  <Button key={s.label} fullWidth variant="default" radius={8}
+                    style={{ border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontWeight: 500, fontSize: 13, height: 52, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <s.icon size={20} /><span>{s.label}</span>
                   </Button>
                 ))}
               </Flex>
 
-              {/* Bottom row — 2 buttons */}
               <Flex gap={10} mb={24}>
                 {socialButtons.slice(3).map((s) => (
-                  <Button
-                    key={s.label}
-                    fullWidth
-                    variant="default"
-                    radius={8}
-                    style={{
-                      border: '1px solid #e5e7eb',
-                      background: '#fff',
-                      color: '#374151',
-                      fontWeight: 500,
-                      fontSize: 13,
-                      height: 52,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4,
-                    }}
-                  >
-                    <s.icon size={20} />
-                    <span>{s.label}</span>
+                  <Button key={s.label} fullWidth variant="default" radius={8}
+                    style={{ border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontWeight: 500, fontSize: 13, height: 52, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <s.icon size={20} /><span>{s.label}</span>
                   </Button>
                 ))}
               </Flex>
 
               <Divider
                 label={<Text size="xs" style={{ color: '#9ca3af' }}>or continue with</Text>}
-                labelPosition="center"
-                mb={20}
-                style={{ borderColor: '#f3f4f6' }}
+                labelPosition="center" mb={20} style={{ borderColor: '#f3f4f6' }}
               />
 
-              {/* Email Form */}
               <form onSubmit={handleEmailSubmit}>
                 <Stack gap={14}>
                   <TextInput
-                    label="Email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    type="email"
-                    styles={inputStyles}
+                    label="Email" placeholder="Enter your email"
+                    value={email} onChange={(e) => { setEmail(e.target.value); setError('') }}
+                    required type="email" styles={inputStyles}
+                    error={error}
                   />
                   <Text size="xs" style={{ color: '#9ca3af', marginTop: -8 }}>
                     Use an organization email to easily collaborate with teammates
                   </Text>
-                  <Button
-                    type="submit"
-                    fullWidth
-                    loading={loading}
-                    radius={8}
-                    style={{
-                      background: BRAND,
-                      color: '#fff',
-                      fontWeight: 600,
-                      fontSize: 14,
-                      height: 42,
-                      border: 'none',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                    }}
-                  >
+                  <Button type="submit" fullWidth loading={loading} radius={8}
+                    style={{ background: BRAND, color: '#fff', fontWeight: 600, fontSize: 14, height: 42, border: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                     Continue
                   </Button>
                 </Stack>
@@ -234,94 +166,51 @@ export default function Login() {
           {step === 'code' && (
             <form onSubmit={handleCodeSubmit}>
               <Stack gap={20} align="center">
-
                 <PinInput
-                  length={6}
-                  value={code}
-                  onChange={setCode}
-                  size="lg"
-                  radius={8}
+                  length={6} value={code} onChange={setCode}
+                  size="lg" radius={8}
                   styles={{
                     input: {
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 8,
-                      fontSize: 20,
-                      fontWeight: 700,
-                      color: '#111827',
-                      '&:focus': {
-                        borderColor: BRAND,
-                        boxShadow: '0 0 0 3px rgba(22,163,74,0.08)',
-                      },
+                      border: '1px solid #e5e7eb', borderRadius: 8,
+                      fontSize: 20, fontWeight: 700, color: '#111827',
+                      '&:focus': { borderColor: BRAND, boxShadow: '0 0 0 3px rgba(22,163,74,0.08)' },
                     },
                   }}
                 />
 
-                <Button
-                  type="submit"
-                  fullWidth
-                  loading={loading}
-                  radius={8}
-                  style={{
-                    background: BRAND,
-                    color: '#fff',
-                    fontWeight: 600,
-                    fontSize: 14,
-                    height: 42,
-                    border: 'none',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                  }}
-                >
+                {error && <Text size="sm" style={{ color: 'red' }}>{error}</Text>}
+
+                <Button type="submit" fullWidth loading={loading} radius={8}
+                  style={{ background: BRAND, color: '#fff', fontWeight: 600, fontSize: 14, height: 42, border: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                   Continue
                 </Button>
 
-                {/* Resend */}
                 <Flex align="center" gap={6}>
-                  <Text size="sm" style={{ color: '#6b7280' }}>
-                    Didn't receive a code?
-                  </Text>
+                  <Text size="sm" style={{ color: '#6b7280' }}>Didn't receive a code?</Text>
                   {resendTimer > 0 ? (
-                    <Text size="sm" style={{ color: '#9ca3af' }}>
-                      Resend in {resendTimer}s
-                    </Text>
+                    <Text size="sm" style={{ color: '#9ca3af' }}>Resend in {resendTimer}s</Text>
                   ) : (
-                    <Anchor
-                      size="sm"
-                      style={{ color: BRAND, fontWeight: 600 }}
-                      onClick={handleResend}
-                    >
-                      Resend
-                    </Anchor>
+                    <Anchor size="sm" style={{ color: BRAND, fontWeight: 600 }} onClick={handleResend}>Resend</Anchor>
                   )}
                 </Flex>
 
-                <Anchor
-                  size="sm"
-                  style={{ color: '#6b7280' }}
-                  onClick={() => setStep('email')}
-                >
+                <Anchor size="sm" style={{ color: '#6b7280' }} onClick={() => { setStep('email'); setCode(''); setError('') }}>
                   ← Use a different email
                 </Anchor>
-
               </Stack>
             </form>
           )}
 
-          {/* Footer */}
           <Text ta="center" size="xs" mt={32} style={{ color: '#9ca3af', lineHeight: 1.6 }}>
             By continuing, you acknowledge that you understand and agree to our{' '}
-            <Anchor size="xs" style={{ color: '#6b7280' }}>Terms & Conditions</Anchor>
-            {' '}and{' '}
+            <Anchor size="xs" style={{ color: '#6b7280' }}>Terms & Conditions</Anchor>{' '}and{' '}
             <Anchor size="xs" style={{ color: '#6b7280' }}>Privacy Policy</Anchor>
           </Text>
 
         </Box>
       </Flex>
 
-      {/* Bottom Nav */}
-      <Flex
-        justify="center" gap={24} py={20}
-        style={{ borderTop: '1px solid #f3f4f6' }}
-      >
+      <Flex justify="center" gap={24} py={20} style={{ borderTop: '1px solid #f3f4f6' }}>
         {['Privacy Policy', 'Terms of Service', 'Help Center'].map((item) => (
           <Anchor key={item} size="xs" style={{ color: '#9ca3af' }}>{item}</Anchor>
         ))}
