@@ -143,55 +143,66 @@ function TranscriptDemo() {
 
 function ScoringDemo() {
     const [animated, setAnimated] = useState(false)
+    const [key, setKey] = useState(0)
 
     useEffect(() => {
         setAnimated(false)
-        const t = setTimeout(() => setAnimated(true), 300)
-        return () => clearTimeout(t)
-    }, [])
+        const t1 = setTimeout(() => setAnimated(true), 300)
+        const t2 = setTimeout(() => {
+            setAnimated(false)
+            setKey(k => k + 1)
+        }, 5000)
+        return () => { clearTimeout(t1); clearTimeout(t2) }
+    }, [key])
 
     const total = scoreCriteria.reduce((s, c) => s + c.score, 0)
     const max = scoreCriteria.reduce((s, c) => s + c.max, 0)
     const pct = Math.round((total / max) * 100)
 
     return (
-        <div style={{ padding: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, letterSpacing: '0.05em' }}>AI SCORE BREAKDOWN</div>
+        <div style={{ padding: '16px 20px' }} key={key}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <span style={{ fontSize: 10, color: '#6b7280', fontWeight: 700, letterSpacing: '0.07em' }}>AI SCORE BREAKDOWN</span>
                 <div style={{
-                    fontSize: 18, fontWeight: 800,
+                    fontSize: 17, fontWeight: 800,
                     color: pct >= 70 ? BRAND : '#dc2626',
                     background: pct >= 70 ? '#f0fdf4' : '#fef2f2',
-                    border: `1px solid ${pct >= 70 ? '#bbf7d0' : '#fecaca'}`,
-                    borderRadius: 8, padding: '2px 10px',
+                    border: `1.5px solid ${pct >= 70 ? '#bbf7d0' : '#fecaca'}`,
+                    borderRadius: 9, padding: '3px 12px',
+                    animation: animated ? 'popIn 0.4s cubic-bezier(0.16,1,0.3,1)' : 'none',
                 }}>
                     {pct}%
                 </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
                 {scoreCriteria.map((c, i) => {
                     const cpct = Math.round((c.score / c.max) * 100)
                     return (
                         <div key={c.label}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                                 <span style={{ fontSize: 11, color: '#374151', fontWeight: 500 }}>{c.label}</span>
                                 <span style={{ fontSize: 11, fontWeight: 700, color: cpct >= 70 ? BRAND : '#ea580c' }}>{c.score}/{c.max}</span>
                             </div>
-                            <div style={{ height: 5, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ height: 6, background: '#f3f4f6', borderRadius: 10, overflow: 'hidden' }}>
                                 <div style={{
-                                    height: '100%', borderRadius: 4,
-                                    background: cpct >= 70 ? BRAND : '#ea580c',
+                                    height: '100%', borderRadius: 10,
+                                    background: cpct >= 70
+                                        ? `linear-gradient(90deg, ${BRAND}, #4ade80)`
+                                        : 'linear-gradient(90deg, #f97316, #ea580c)',
                                     width: animated ? `${cpct}%` : '0%',
-                                    transition: `width 0.8s ease ${i * 0.1}s`,
+                                    transition: `width 0.9s cubic-bezier(0.16,1,0.3,1) ${i * 0.1}s`,
+                                    boxShadow: cpct >= 70 ? '0 0 6px rgba(22,163,74,0.4)' : 'none',
                                 }} />
                             </div>
                         </div>
                     )
                 })}
             </div>
-            <div style={{ marginTop: 14, padding: 10, background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
-                <div style={{ fontSize: 10, color: BRAND, fontWeight: 700, marginBottom: 4 }}>AI SUMMARY</div>
-                <div style={{ fontSize: 11, color: '#166534', lineHeight: 1.5 }}>
+
+            <div style={{ marginTop: 14, padding: '10px 12px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0' }}>
+                <div style={{ fontSize: 9, color: BRAND, fontWeight: 800, marginBottom: 4, letterSpacing: '0.07em' }}>🧠 AI SUMMARY</div>
+                <div style={{ fontSize: 11, color: '#166534', lineHeight: 1.6 }}>
                     Strong call. Agent showed good product knowledge and secured a demo. Work on objection handling depth.
                 </div>
             </div>
@@ -539,64 +550,92 @@ export default function Home() {
                 </div>
 
                 {/* Hero Interactive Demo Cards */}
+                {/* Hero Interactive Demo Cards */}
                 <div className={`fade-up delay-5 ${visible ? 'visible' : ''}`}
-                    style={{ maxWidth: 1000, width: '100%', marginTop: 72, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, position: 'relative' }}>
+                    style={{ maxWidth: 1060, width: '100%', marginTop: 64, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, position: 'relative' }}>
 
-                    {/* Card 1 — Upload */}
-                    <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
-                        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #dcfce7', padding: '12px 16px' }}>
-                            <div style={{ fontSize: 10, color: BRAND, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Step 1 — Upload</div>
-                        </div>
-                        <div style={{ padding: 16 }}>
+                    {/* shared card style */}
+                    {[
+                        {
+                            step: 'Step 1', label: 'Upload', accent: '#16a34a', accentBg: '#f0fdf4', accentBorder: '#bbf7d0',
+                            content: (
+                                <div style={{ padding: '20px 20px 24px' }}>
+                                    {/* fake audio file row */}
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', gap: 10,
+                                        background: '#f9fafb', border: '1px solid #f3f4f6',
+                                        borderRadius: 10, padding: '10px 14px', marginBottom: 12,
+                                    }}>
+                                        <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🎵</div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontSize: 12, fontWeight: 600, color: '#111827', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>sales_call_may12.mp3</div>
+                                            <div style={{ fontSize: 10, color: '#9ca3af' }}>4.2 MB · 6:34 min</div>
+                                        </div>
+                                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <span style={{ fontSize: 10, color: BRAND }}>✓</span>
+                                        </div>
+                                    </div>
+
+                                    {/* drop zone */}
+                                    <div style={{
+                                        border: '2px dashed #d1fae5', borderRadius: 12,
+                                        padding: '22px 16px', textAlign: 'center', background: '#fafffe',
+                                    }}>
+                                        <div style={{ fontSize: 26, marginBottom: 8 }}>⬆️</div>
+                                        <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 4 }}>Drop another call here</div>
+                                        <div style={{ fontSize: 11, color: '#9ca3af' }}>MP3, WAV, M4A · Max 500MB</div>
+                                    </div>
+
+                                    {/* upload progress */}
+                                    <div style={{ marginTop: 14 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                                            <span style={{ fontSize: 11, color: '#6b7280' }}>Uploading...</span>
+                                            <span style={{ fontSize: 11, fontWeight: 700, color: BRAND }}>72%</span>
+                                        </div>
+                                        <div style={{ height: 5, background: '#f3f4f6', borderRadius: 10, overflow: 'hidden' }}>
+                                            <div style={{ height: '100%', width: '72%', background: `linear-gradient(90deg, ${BRAND}, #4ade80)`, borderRadius: 10 }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            ),
+                        },
+                        {
+                            step: 'Step 2', label: 'Transcript', accent: '#2563eb', accentBg: '#eff6ff', accentBorder: '#bfdbfe',
+                            content: <TranscriptDemo />,
+                        },
+                        {
+                            step: 'Step 3', label: 'AI Score', accent: '#ca8a04', accentBg: '#fefce8', accentBorder: '#fde047',
+                            content: <ScoringDemo />,
+                        },
+                    ].map(({ step, label, accent, accentBg, accentBorder, content }) => (
+                        <div key={label} style={{
+                            background: '#fff',
+                            borderRadius: 20,
+                            border: '1px solid #e5e7eb',
+                            overflow: 'hidden',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.06)',
+                            display: 'flex', flexDirection: 'column',
+                        }}>
+                            {/* card header */}
                             <div style={{
-                                border: '2px dashed #bbf7d0', borderRadius: 12,
-                                padding: '24px 16px', textAlign: 'center',
-                                background: uploadStep >= 1 ? '#f0fdf4' : '#fafafa',
-                                transition: 'all 0.4s',
+                                padding: '14px 20px',
+                                background: accentBg,
+                                borderBottom: `1px solid ${accentBorder}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             }}>
-                                <div style={{ fontSize: 28, marginBottom: 8 }}>
-                                    {uploadStep === 0 ? '📂' : uploadStep === 1 ? '⬆️' : uploadStep === 2 ? '⏳' : uploadStep === 3 ? '✅' : '🎉'}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: accent }} />
+                                    <span style={{ fontSize: 11, fontWeight: 800, color: accent, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                                        {step} — {label}
+                                    </span>
                                 </div>
-                                <div style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>
-                                    {uploadStep === 0 ? 'Drop your call here' :
-                                        uploadStep === 1 ? 'Uploading...' :
-                                            uploadStep === 2 ? 'Transcribing...' :
-                                                uploadStep === 3 ? 'Scoring with AI...' : 'Done! 84% — PASS ✓'}
+                                <div style={{ width: 20, height: 20, borderRadius: '50%', background: accent + '20', border: `1px solid ${accent}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <span style={{ fontSize: 9, color: accent }}>●</span>
                                 </div>
-                                {uploadStep === 1 && (
-                                    <div style={{ marginTop: 8, height: 4, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
-                                        <div style={{ height: '100%', width: '60%', background: BRAND, borderRadius: 4, animation: 'progressBar 1.8s ease infinite' }} />
-                                    </div>
-                                )}
-                                {uploadStep === 2 && (
-                                    <div style={{ marginTop: 8, display: 'flex', gap: 4, justifyContent: 'center' }}>
-                                        {[0, 1, 2].map(i => (
-                                            <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: BRAND, animation: `bounce 0.8s infinite ${i * 0.15}s` }} />
-                                        ))}
-                                    </div>
-                                )}
                             </div>
-                            <div style={{ marginTop: 12, fontSize: 11, color: '#9ca3af', textAlign: 'center' }}>
-                                MP3, WAV, M4A supported
-                            </div>
+                            {content}
                         </div>
-                    </div>
-
-                    {/* Card 2 — Transcript */}
-                    <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
-                        <div style={{ background: '#eff6ff', borderBottom: '1px solid #dbeafe', padding: '12px 16px' }}>
-                            <div style={{ fontSize: 10, color: '#2563eb', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Step 2 — Transcript</div>
-                        </div>
-                        <TranscriptDemo />
-                    </div>
-
-                    {/* Card 3 — Score */}
-                    <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
-                        <div style={{ background: '#fefce8', borderBottom: '1px solid #fef08a', padding: '12px 16px' }}>
-                            <div style={{ fontSize: 10, color: '#ca8a04', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Step 3 — AI Score</div>
-                        </div>
-                        <ScoringDemo />
-                    </div>
+                    ))}
                 </div>
 
                 <div style={{ marginTop: 48, color: '#d1d5db', fontSize: 20, animation: 'scrollBounce 2s infinite' }}>↓</div>
