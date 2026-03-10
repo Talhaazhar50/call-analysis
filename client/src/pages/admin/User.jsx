@@ -1,438 +1,206 @@
-import { useMemo, useState } from "react";
+import { IconDotsVertical, IconEdit, IconPlus, IconSearch, IconTrash, IconUserOff } from "@tabler/icons-react";
+import { useState } from "react";
+import { useOutletContext } from "react-router-dom";
 
 import {
-    Box, Flex, Text, Title, Button, TextInput, Select,
-    Badge, Table, Avatar, Switch, Menu, ActionIcon,
-    Modal, Stack, Group, ScrollArea, Paper, Divider,
+    Box, Flex, Text, Title, Button, Badge, Paper,
+    Modal, Stack, TextInput, Select, Switch, ActionIcon, Menu, Divider,
 } from '@mantine/core'
-import {
-    IconPlus, IconSearch, IconDotsVertical,
-    IconEdit, IconTrash, IconUserOff, IconMailPlus,
-} from '@tabler/icons-react'
 
 const BRAND = '#16a34a'
 
 const initialUsers = [
-    { id: 1, name: 'Ava Thompson', email: 'ava.thompson@example.com', role: 'Admin', team: 'Operations', lastLogin: 'Mar 10, 2026', status: true },
-    { id: 2, name: 'Noah Williams', email: 'noah.williams@example.com', role: 'User', team: 'Finance', lastLogin: 'Mar 9, 2026', status: true },
-    { id: 3, name: 'Sophia Martinez', email: 'sophia.martinez@example.com', role: 'User', team: 'HR', lastLogin: 'Mar 7, 2026', status: false },
-    { id: 4, name: 'Liam Brown', email: 'liam.brown@example.com', role: 'Admin', team: 'Engineering', lastLogin: 'Mar 10, 2026', status: true },
-    { id: 5, name: 'Emily Chen', email: 'emily.chen@example.com', role: 'User', team: 'Support', lastLogin: 'Mar 8, 2026', status: true },
+    { id: 1, name: 'Sarah Johnson', email: 'sarah@acme.com', role: 'agent', team: 'Operations', lastLogin: 'Mar 10, 2025', active: true },
+    { id: 2, name: 'James Miller', email: 'james@acme.com', role: 'agent', team: 'Operations', lastLogin: 'Mar 10, 2025', active: true },
+    { id: 3, name: 'Emily Chen', email: 'emily@acme.com', role: 'agent', team: 'Support', lastLogin: 'Mar 9, 2025', active: true },
+    { id: 4, name: 'Carlos Rivera', email: 'carlos@acme.com', role: 'agent', team: 'Support', lastLogin: 'Mar 9, 2025', active: false },
+    { id: 5, name: 'Aisha Khan', email: 'aisha@acme.com', role: 'admin', team: 'HR', lastLogin: 'Mar 8, 2025', active: true },
 ]
 
-const teamOptions = ['Operations', 'Finance', 'HR', 'Engineering', 'Support'].map(v => ({ value: v, label: v }))
-const roleOptions = ['User', 'Admin'].map(v => ({ value: v, label: v }))
-const emptyForm = { name: '', email: '', role: 'User', team: '' }
-
-function getInitials(name) {
-    return name.split(' ').filter(Boolean).slice(0, 2).map(p => p[0]?.toUpperCase()).join('')
+const avatarColor = (name) => {
+    const colors = [BRAND, '#2563eb', '#7c3aed', '#ea580c', '#0891b2', '#db2777']
+    return colors[name.charCodeAt(0) % colors.length]
 }
 
-function avatarColor(name) {
-    const colors = ['#16a34a', '#2563eb', '#7c3aed', '#db2777', '#ea580c']
-    const i = name.charCodeAt(0) % colors.length
-    return colors[i]
-}
+const emptyForm = { name: '', email: '', role: 'agent', team: '' }
 
-function UserModal({ opened, onClose, title, form, setForm, onSubmit, submitLabel }) {
-    return (
-        <Modal
-            opened={opened}
-            onClose={onClose}
-            title={<Text style={{ fontWeight: 700, fontSize: 16, color: '#111827' }}>{title}</Text>}
-            centered
-            radius={12}
-            overlayProps={{ blur: 2 }}
-            styles={{
-                content: { border: '1px solid #f3f4f6' },
-                header: { borderBottom: '1px solid #f3f4f6', paddingBottom: 16 },
-            }}
-        >
-            <Stack gap={16} pt={8}>
-                <TextInput
-                    label="Full Name"
-                    placeholder="Enter full name"
-                    value={form.name}
-                    onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
-                    styles={{
-                        label: { fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 },
-                        input: { borderRadius: 8, border: '1px solid #e5e7eb', height: 42, fontSize: 14, '&:focus': { borderColor: BRAND } },
-                    }}
-                />
-                <TextInput
-                    label="Email Address"
-                    placeholder="Enter email"
-                    value={form.email}
-                    onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))}
-                    styles={{
-                        label: { fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 },
-                        input: { borderRadius: 8, border: '1px solid #e5e7eb', height: 42, fontSize: 14, '&:focus': { borderColor: BRAND } },
-                    }}
-                />
-                <Select
-                    label="Role"
-                    data={roleOptions}
-                    value={form.role}
-                    onChange={(v) => setForm(p => ({ ...p, role: v || 'User' }))}
-                    allowDeselect={false}
-                    styles={{
-                        label: { fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 },
-                        input: { borderRadius: 8, border: '1px solid #e5e7eb', height: 42, fontSize: 14 },
-                    }}
-                />
-                <Select
-                    label="Team"
-                    placeholder="Select team"
-                    data={teamOptions}
-                    value={form.team}
-                    onChange={(v) => setForm(p => ({ ...p, team: v || '' }))}
-                    styles={{
-                        label: { fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 },
-                        input: { borderRadius: 8, border: '1px solid #e5e7eb', height: 42, fontSize: 14 },
-                    }}
-                />
-                <Flex justify="flex-end" gap={10} mt={8}>
-                    <Button
-                        variant="default"
-                        radius={8}
-                        onClick={onClose}
-                        style={{ border: '1px solid #e5e7eb', color: '#374151', fontWeight: 500 }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        radius={8}
-                        leftSection={<IconMailPlus size={15} />}
-                        onClick={onSubmit}
-                        style={{ background: BRAND, color: '#fff', fontWeight: 600, border: 'none' }}
-                    >
-                        {submitLabel}
-                    </Button>
-                </Flex>
-            </Stack>
-        </Modal>
-    )
-}
-
-export default function UsersPage() {
+export default function User() {
+    const { C } = useOutletContext()
     const [users, setUsers] = useState(initialUsers)
     const [search, setSearch] = useState('')
-    const [roleFilter, setRoleFilter] = useState('All')
-    const [statusFilter, setStatusFilter] = useState('All')
-    const [inviteOpen, setInviteOpen] = useState(false)
-    const [editOpen, setEditOpen] = useState(false)
-    const [inviteForm, setInviteForm] = useState(emptyForm)
-    const [editForm, setEditForm] = useState(emptyForm)
+    const [roleFilter, setRoleFilter] = useState('')
+    const [statusFilter, setStatusFilter] = useState('')
+    const [modalOpen, setModalOpen] = useState(false)
     const [editId, setEditId] = useState(null)
+    const [form, setForm] = useState(emptyForm)
 
-    const filtered = useMemo(() => users.filter(u => {
-        const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())
-        const matchRole = roleFilter === 'All' || u.role === roleFilter
-        const matchStatus = statusFilter === 'All' || (statusFilter === 'Active' ? u.status : !u.status)
+    const filtered = users.filter(u => {
+        const q = search.toLowerCase()
+        const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+        const matchRole = !roleFilter || u.role === roleFilter
+        const matchStatus = !statusFilter || (statusFilter === 'active' ? u.active : !u.active)
         return matchSearch && matchRole && matchStatus
-    }), [users, search, roleFilter, statusFilter])
+    })
 
-    const handleInvite = () => {
-        if (!inviteForm.name || !inviteForm.email) return
-        setUsers(p => [{ id: Date.now(), ...inviteForm, status: true, lastLogin: 'Never', avatar: '' }, ...p])
-        setInviteForm(emptyForm)
-        setInviteOpen(false)
-    }
-
-    const handleEdit = (user) => {
-        setEditId(user.id)
-        setEditForm({ name: user.name, email: user.email, role: user.role, team: user.team })
-        setEditOpen(true)
-    }
-
+    const openCreate = () => { setEditId(null); setForm(emptyForm); setModalOpen(true) }
+    const openEdit = (u) => { setEditId(u.id); setForm({ name: u.name, email: u.email, role: u.role, team: u.team }); setModalOpen(true) }
     const handleSave = () => {
-        setUsers(p => p.map(u => u.id === editId ? { ...u, ...editForm } : u))
-        setEditOpen(false)
-        setEditId(null)
-        setEditForm(emptyForm)
+        if (!form.name || !form.email) return
+        if (editId) setUsers(p => p.map(u => u.id === editId ? { ...u, ...form } : u))
+        else setUsers(p => [...p, { id: Date.now(), ...form, lastLogin: 'Never', active: true }])
+        setModalOpen(false)
+    }
+    const handleDelete = (id) => setUsers(p => p.filter(u => u.id !== id))
+    const handleToggle = (id) => setUsers(p => p.map(u => u.id === id ? { ...u, active: !u.active } : u))
+
+    const inputStyles = {
+        label: { fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 6 },
+        input: { background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: 8, height: 42, fontSize: 14 },
     }
 
-    const toggleStatus = (id) => setUsers(p => p.map(u => u.id === id ? { ...u, status: !u.status } : u))
-    const deactivate = (id) => setUsers(p => p.map(u => u.id === id ? { ...u, status: false } : u))
-    const deleteUser = (id) => setUsers(p => p.filter(u => u.id !== id))
+    const thStyle = {
+        fontSize: 11, color: C.subtle, fontWeight: 600,
+        textTransform: 'uppercase', letterSpacing: '0.05em',
+        padding: '10px 16px', textAlign: 'left', background: C.tableTh,
+    }
+    const tdStyle = { padding: '14px 16px', borderTop: `1px solid ${C.border}` }
 
     return (
         <Box>
-            {/* Header */}
-            <Flex
-                justify="space-between"
-                align="flex-start"
-                mb={24}
-                style={{ flexWrap: 'wrap', gap: 12 }}
-            >
+            <Flex justify="space-between" align="flex-start" mb={24} style={{ flexWrap: 'wrap', gap: 12 }}>
                 <Box>
-                    <Title order={2} style={{ color: '#111827', fontWeight: 700, fontSize: 22, letterSpacing: '-0.3px' }}>
-                        Users
-                    </Title>
-                    <Text style={{ color: '#6b7280', fontSize: 14, marginTop: 4 }}>
-                        Manage team members, roles and account status
-                    </Text>
+                    <Title order={2} style={{ color: C.text, fontWeight: 700, fontSize: 22, letterSpacing: '-0.3px' }}>Users</Title>
+                    <Text style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>Manage agents and admin accounts</Text>
                 </Box>
-                <Button
-                    leftSection={<IconPlus size={15} />}
-                    radius={8}
-                    onClick={() => setInviteOpen(true)}
-                    style={{
-                        background: BRAND, color: '#fff',
-                        fontWeight: 600, fontSize: 14,
-                        border: 'none', height: 40,
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                    }}
-                >
+                <Button leftSection={<IconPlus size={15} />} radius={8} onClick={openCreate}
+                    style={{ background: BRAND, color: '#fff', fontWeight: 600, fontSize: 14, border: 'none', height: 40 }}>
                     Invite User
                 </Button>
             </Flex>
 
             {/* Filters */}
-            <Paper
-                p={16}
-                radius={12}
-                mb={16}
-                style={{ border: '1px solid #f3f4f6', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
-            >
+            <Paper p={16} radius={10} mb={16} style={{ border: `1px solid ${C.border}`, background: C.surface, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                 <Flex gap={12} style={{ flexWrap: 'wrap' }}>
-                    <TextInput
-                        placeholder="Search by name or email..."
-                        leftSection={<IconSearch size={15} color="#9ca3af" />}
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        style={{ flex: 2, minWidth: 200 }}
-                        styles={{
-                            input: { borderRadius: 8, border: '1px solid #e5e7eb', height: 38, fontSize: 14, '&:focus': { borderColor: BRAND } },
-                        }}
-                    />
-                    <Select
-                        placeholder="All Roles"
-                        data={[{ value: 'All', label: 'All Roles' }, ...roleOptions]}
-                        value={roleFilter}
-                        onChange={(v) => setRoleFilter(v || 'All')}
-                        allowDeselect={false}
-                        style={{ minWidth: 130 }}
-                        styles={{
-                            input: { borderRadius: 8, border: '1px solid #e5e7eb', height: 38, fontSize: 14 },
-                        }}
-                    />
-                    <Select
-                        placeholder="All Statuses"
-                        data={[
-                            { value: 'All', label: 'All Statuses' },
-                            { value: 'Active', label: 'Active' },
-                            { value: 'Inactive', label: 'Inactive' },
-                        ]}
-                        value={statusFilter}
-                        onChange={(v) => setStatusFilter(v || 'All')}
-                        allowDeselect={false}
-                        style={{ minWidth: 140 }}
-                        styles={{
-                            input: { borderRadius: 8, border: '1px solid #e5e7eb', height: 38, fontSize: 14 },
-                        }}
-                    />
+                    <TextInput placeholder="Search users..." value={search} onChange={(e) => setSearch(e.target.value)}
+                        leftSection={<IconSearch size={15} color={C.subtle} />} style={{ flex: '1 1 200px' }}
+                        styles={{ input: { background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: 8, height: 38 } }} />
+                    <Select placeholder="All Roles" data={[{ value: 'admin', label: 'Admin' }, { value: 'agent', label: 'Agent' }]}
+                        value={roleFilter} onChange={(v) => setRoleFilter(v || '')} clearable style={{ minWidth: 130 }}
+                        styles={{ input: { background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: 8, height: 38 } }} />
+                    <Select placeholder="All Status" data={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
+                        value={statusFilter} onChange={(v) => setStatusFilter(v || '')} clearable style={{ minWidth: 130 }}
+                        styles={{ input: { background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: 8, height: 38 } }} />
                 </Flex>
             </Paper>
 
             {/* Table */}
-            <Paper
-                radius={12}
-                style={{
-                    border: '1px solid #f3f4f6',
-                    background: '#fff',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                    overflow: 'hidden',
-                }}
-            >
-                {/* Table Header */}
-                <Flex
-                    justify="space-between"
-                    align="center"
-                    px={20}
-                    py={14}
-                    style={{ borderBottom: '1px solid #f3f4f6' }}
-                >
-                    <Text style={{ fontWeight: 600, fontSize: 15, color: '#111827' }}>
-                        All Users
-                    </Text>
-                    <Badge
-                        radius={6}
-                        style={{
-                            background: '#f0fdf4', color: BRAND,
-                            border: '1px solid #bbf7d0',
-                            fontWeight: 600, fontSize: 12,
-                        }}
-                    >
-                        {filtered.length} records
-                    </Badge>
-                </Flex>
-
-                <ScrollArea>
-                    <Table highlightOnHover style={{ minWidth: 800 }}>
-                        <Table.Thead>
-                            <Table.Tr style={{ background: '#f9fafb' }}>
-                                {['Name', 'Email', 'Role', 'Team', 'Last Login', 'Status', ''].map((h) => (
-                                    <Table.Th
-                                        key={h}
-                                        style={{
-                                            fontSize: 12, color: '#6b7280', fontWeight: 600,
-                                            textTransform: 'uppercase', letterSpacing: '0.05em',
-                                            padding: '11px 20px',
-                                        }}
-                                    >
-                                        {h}
-                                    </Table.Th>
-                                ))}
-                            </Table.Tr>
-                        </Table.Thead>
-                        <Table.Tbody>
-                            {filtered.length === 0 ? (
-                                <Table.Tr>
-                                    <Table.Td colSpan={7}>
-                                        <Flex direction="column" align="center" py={40} gap={6}>
-                                            <Text style={{ fontWeight: 600, color: '#374151' }}>No users found</Text>
-                                            <Text style={{ fontSize: 13, color: '#9ca3af' }}>Try adjusting your filters</Text>
-                                        </Flex>
-                                    </Table.Td>
-                                </Table.Tr>
-                            ) : filtered.map((user) => (
-                                <Table.Tr key={user.id}>
-                                    {/* Name */}
-                                    <Table.Td style={{ padding: '14px 20px' }}>
+            <Paper radius={12} style={{ border: `1px solid ${C.border}`, background: C.surface, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                        <tr>
+                            {['Name', 'Role', 'Team', 'Last Login', 'Status', 'Actions'].map(h => (
+                                <th key={h} style={thStyle}>{h}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtered.map((u) => {
+                            const color = avatarColor(u.name)
+                            return (
+                                <tr key={u.id}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = C.hover}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                >
+                                    <td style={tdStyle}>
                                         <Flex align="center" gap={10}>
-                                            <Box
-                                                style={{
-                                                    width: 34, height: 34, borderRadius: '50%',
-                                                    background: avatarColor(user.name),
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    flexShrink: 0,
-                                                }}
-                                            >
-                                                <Text style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>
-                                                    {getInitials(user.name)}
-                                                </Text>
+                                            <Box style={{
+                                                width: 32, height: 32, borderRadius: '50%',
+                                                background: color + '20', border: `1.5px solid ${color}40`,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                            }}>
+                                                <Text style={{ fontSize: 11, fontWeight: 700, color }}>{u.name.slice(0, 2).toUpperCase()}</Text>
                                             </Box>
-                                            <Text style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
-                                                {user.name}
-                                            </Text>
+                                            <Box>
+                                                <Text style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{u.name}</Text>
+                                                <Text style={{ fontSize: 11, color: C.subtle }}>{u.email}</Text>
+                                            </Box>
                                         </Flex>
-                                    </Table.Td>
-
-                                    {/* Email */}
-                                    <Table.Td style={{ padding: '14px 20px' }}>
-                                        <Text style={{ fontSize: 13, color: '#6b7280' }}>{user.email}</Text>
-                                    </Table.Td>
-
-                                    {/* Role */}
-                                    <Table.Td style={{ padding: '14px 20px' }}>
-                                        <Badge
-                                            radius={6}
-                                            style={{
-                                                background: user.role === 'Admin' ? '#f5f3ff' : '#eff6ff',
-                                                color: user.role === 'Admin' ? '#7c3aed' : '#2563eb',
-                                                border: `1px solid ${user.role === 'Admin' ? '#ddd6fe' : '#bfdbfe'}`,
-                                                fontWeight: 600, fontSize: 12,
-                                            }}
-                                        >
-                                            {user.role}
-                                        </Badge>
-                                    </Table.Td>
-
-                                    {/* Team */}
-                                    <Table.Td style={{ padding: '14px 20px' }}>
-                                        <Text style={{ fontSize: 13, color: '#374151' }}>{user.team}</Text>
-                                    </Table.Td>
-
-                                    {/* Last Login */}
-                                    <Table.Td style={{ padding: '14px 20px' }}>
-                                        <Text style={{ fontSize: 13, color: '#9ca3af' }}>{user.lastLogin}</Text>
-                                    </Table.Td>
-
-                                    {/* Status */}
-                                    <Table.Td style={{ padding: '14px 20px' }}>
+                                    </td>
+                                    <td style={tdStyle}>
+                                        <Badge radius={6} style={{
+                                            background: u.role === 'admin' ? '#eff6ff' : '#f5f3ff',
+                                            color: u.role === 'admin' ? '#2563eb' : '#7c3aed',
+                                            border: `1px solid ${u.role === 'admin' ? '#bfdbfe' : '#ddd6fe'}`,
+                                            fontWeight: 600, fontSize: 11, textTransform: 'capitalize',
+                                        }}>{u.role}</Badge>
+                                    </td>
+                                    <td style={tdStyle}><Text style={{ fontSize: 13, color: C.muted }}>{u.team}</Text></td>
+                                    <td style={tdStyle}><Text style={{ fontSize: 13, color: C.subtle }}>{u.lastLogin}</Text></td>
+                                    <td style={tdStyle}>
                                         <Flex align="center" gap={8}>
-                                            <Switch
-                                                checked={user.status}
-                                                onChange={() => toggleStatus(user.id)}
-                                                size="sm"
-                                                color="green"
-                                            />
-                                            <Badge
-                                                radius={6}
-                                                style={{
-                                                    background: user.status ? '#f0fdf4' : '#f9fafb',
-                                                    color: user.status ? BRAND : '#6b7280',
-                                                    border: `1px solid ${user.status ? '#bbf7d0' : '#e5e7eb'}`,
-                                                    fontWeight: 600, fontSize: 11,
-                                                }}
-                                            >
-                                                {user.status ? 'Active' : 'Inactive'}
-                                            </Badge>
+                                            <Switch checked={u.active} onChange={() => handleToggle(u.id)} color="green" size="sm" />
+                                            <Badge radius={6} style={{
+                                                background: u.active ? '#f0fdf4' : C.hover,
+                                                color: u.active ? BRAND : C.subtle,
+                                                border: `1px solid ${u.active ? '#bbf7d0' : C.border}`,
+                                                fontWeight: 600, fontSize: 11,
+                                            }}>{u.active ? 'Active' : 'Inactive'}</Badge>
                                         </Flex>
-                                    </Table.Td>
-
-                                    {/* Actions */}
-                                    <Table.Td style={{ padding: '14px 20px' }}>
-                                        <Menu shadow="md" width={160} position="bottom-end" withinPortal>
+                                    </td>
+                                    <td style={tdStyle}>
+                                        <Menu shadow="md" width={150} position="bottom-end" withinPortal>
                                             <Menu.Target>
-                                                <ActionIcon variant="subtle" color="gray" radius={6}>
-                                                    <IconDotsVertical size={16} />
-                                                </ActionIcon>
+                                                <ActionIcon variant="subtle" color="gray" radius={6}><IconDotsVertical size={15} /></ActionIcon>
                                             </Menu.Target>
-                                            <Menu.Dropdown style={{ borderRadius: 10, border: '1px solid #f3f4f6' }}>
-                                                <Menu.Item
-                                                    leftSection={<IconEdit size={14} />}
-                                                    onClick={() => handleEdit(user)}
-                                                    style={{ fontSize: 13 }}
-                                                >
-                                                    Edit
+                                            <Menu.Dropdown style={{ borderRadius: 10, background: C.surface, border: `1px solid ${C.border}` }}>
+                                                <Menu.Item leftSection={<IconEdit size={14} />} style={{ fontSize: 13, color: C.text }} onClick={() => openEdit(u)}>Edit</Menu.Item>
+                                                <Menu.Item leftSection={<IconUserOff size={14} />} style={{ fontSize: 13, color: C.text }} onClick={() => handleToggle(u.id)}>
+                                                    {u.active ? 'Deactivate' : 'Activate'}
                                                 </Menu.Item>
-                                                <Menu.Item
-                                                    leftSection={<IconUserOff size={14} />}
-                                                    onClick={() => deactivate(user.id)}
-                                                    style={{ fontSize: 13 }}
-                                                >
-                                                    Deactivate
-                                                </Menu.Item>
-                                                <Divider />
-                                                <Menu.Item
-                                                    color="red"
-                                                    leftSection={<IconTrash size={14} />}
-                                                    onClick={() => deleteUser(user.id)}
-                                                    style={{ fontSize: 13 }}
-                                                >
-                                                    Delete
-                                                </Menu.Item>
+                                                <Divider style={{ borderColor: C.border }} />
+                                                <Menu.Item color="red" leftSection={<IconTrash size={14} />} style={{ fontSize: 13 }} onClick={() => handleDelete(u.id)}>Delete</Menu.Item>
                                             </Menu.Dropdown>
                                         </Menu>
-                                    </Table.Td>
-                                </Table.Tr>
-                            ))}
-                        </Table.Tbody>
-                    </Table>
-                </ScrollArea>
+                                    </td>
+                                </tr>
+                            )
+                        })}
+                    </tbody>
+                </table>
             </Paper>
 
-            <UserModal
-                opened={inviteOpen}
-                onClose={() => setInviteOpen(false)}
-                title="Invite User"
-                form={inviteForm}
-                setForm={setInviteForm}
-                onSubmit={handleInvite}
-                submitLabel="Send Invite"
-            />
-
-            <UserModal
-                opened={editOpen}
-                onClose={() => setEditOpen(false)}
-                title="Edit User"
-                form={editForm}
-                setForm={setEditForm}
-                onSubmit={handleSave}
-                submitLabel="Save Changes"
-            />
+            {/* Modal */}
+            <Modal opened={modalOpen} onClose={() => setModalOpen(false)} centered radius={12} size="md"
+                overlayProps={{ blur: 2 }}
+                title={<Text style={{ fontWeight: 700, fontSize: 16, color: C.text }}>{editId ? 'Edit User' : 'Invite User'}</Text>}
+                styles={{
+                    content: { background: C.surface, border: `1px solid ${C.border}` },
+                    header: { background: C.surface, borderBottom: `1px solid ${C.border}` },
+                }}
+            >
+                <Stack gap={14} pt={8}>
+                    <TextInput label="Full Name" placeholder="e.g. Sarah Johnson" value={form.name}
+                        onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} styles={inputStyles} />
+                    <TextInput label="Email" placeholder="email@company.com" value={form.email}
+                        onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))} styles={inputStyles} />
+                    <Flex gap={12}>
+                        <Select label="Role" data={[{ value: 'agent', label: 'Agent' }, { value: 'admin', label: 'Admin' }]}
+                            value={form.role} onChange={(v) => setForm(p => ({ ...p, role: v || 'agent' }))}
+                            style={{ flex: 1 }} styles={inputStyles} />
+                        <Select label="Team" data={['Operations', 'Support', 'HR', 'Finance'].map(v => ({ value: v, label: v }))}
+                            value={form.team} onChange={(v) => setForm(p => ({ ...p, team: v || '' }))}
+                            style={{ flex: 1 }} styles={inputStyles} />
+                    </Flex>
+                    <Flex gap={10} justify="flex-end" mt={4}>
+                        <Button variant="default" radius={8} onClick={() => setModalOpen(false)}
+                            style={{ border: `1px solid ${C.inputBorder}`, color: C.text, fontWeight: 500 }}>Cancel</Button>
+                        <Button radius={8} onClick={handleSave}
+                            style={{ background: BRAND, color: '#fff', fontWeight: 600, border: 'none' }}>
+                            {editId ? 'Save Changes' : 'Send Invite'}
+                        </Button>
+                    </Flex>
+                </Stack>
+            </Modal>
         </Box>
     )
 }
