@@ -12,6 +12,7 @@ import UploadCall from "./pages/user/UploadCall";
 import User from "./pages/admin/User";
 import UserDashboard from "./pages/user/UserDashboard";
 import UserLayout from "./pages/user/UserLayout";
+import UserSettings from "./pages/user/UserSettings";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <Route path="upload" element={<UploadCall />} />
         <Route path="calls" element={<MyCalls />} />
         <Route path="calls/:id" element={<CallResults />} />
+        <Route path="settings" element={<UserSettings />} />
       </Route>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />

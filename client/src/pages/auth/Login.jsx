@@ -1,7 +1,12 @@
-import { IconBrandApple, IconBrandGoogle, IconBrandWindows, IconBuilding, IconFingerprint, IconHeadphones } from "@tabler/icons-react";
+import { startAuthentication } from '@simplewebauthn/browser'
+import {
+  IconBrandApple, IconBrandGoogle, IconBrandWindows,
+  IconBuilding, IconFingerprint, IconHeadphones
+} from "@tabler/icons-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import axios from 'axios'
 
 import {
   TextInput, Button, Title, Text, Stack, Box,
@@ -9,6 +14,7 @@ import {
 } from '@mantine/core'
 
 const BRAND = '#16a34a'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 const socialButtons = [
   { icon: IconBrandGoogle, label: 'Google' },
@@ -20,12 +26,13 @@ const socialButtons = [
 
 export default function Login() {
   const navigate = useNavigate()
-  const { sendCode, verifyCode } = useAuth()
+  const { sendCode, verifyCode, login } = useAuth()
 
   const [step, setStep] = useState('email')
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [error, setError] = useState('')
   const [resendTimer, setResendTimer] = useState(0)
 
@@ -80,6 +87,42 @@ export default function Login() {
     }
   }
 
+const handlePasskey = async () => {
+  setPasskeyLoading(true)
+  setError('')
+  try {
+    // No email needed
+const { data: options } = await axios.post(
+  `${API}/auth/passkey/login-options`, 
+  {},
+  { withCredentials: true }  // <-- add this
+)
+    // Browser shows passkey picker automatically
+const authResponse = await startAuthentication({ optionsJSON: options })
+
+    // No email in body
+const { data } = await axios.post(
+  `${API}/auth/passkey/login-verify`, 
+  { authResponse },
+  { withCredentials: true }  // <-- add this
+)
+    login(data.token, data.user)
+    navigate(data.user.role === 'admin' ? '/admin' : '/dashboard', { replace: true })
+  } catch (err) {
+    if (err.name === 'NotAllowedError') {
+      setError('Passkey authentication was cancelled')
+    } else {
+      setError(err.response?.data?.message || 'No passkey found on this device.')
+    }
+  } finally {
+    setPasskeyLoading(false)
+  }
+}
+  const handleSocialClick = (label) => {
+    if (label === 'Passkey') return handlePasskey()
+    // Google, Apple, Microsoft, SSO — coming soon
+  }
+
   const inputStyles = {
     label: { color: '#374151', fontSize: 13, fontWeight: 500, marginBottom: 6 },
     input: {
@@ -120,23 +163,56 @@ export default function Login() {
             <>
               <Text size="xs" ta="center" style={{ color: '#9ca3af', marginBottom: 12 }}>Log in with</Text>
 
+              {/* Google, Apple, Microsoft */}
               <Flex gap={10} mb={10}>
                 {socialButtons.slice(0, 3).map((s) => (
-                  <Button key={s.label} fullWidth variant="default" radius={8}
-                    style={{ border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontWeight: 500, fontSize: 13, height: 52, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <Button
+                    key={s.label} fullWidth variant="default" radius={8}
+                    onClick={() => handleSocialClick(s.label)}
+                    style={{
+                      border: '1px solid #e5e7eb', background: '#fff',
+                      color: '#374151', fontWeight: 500, fontSize: 13,
+                      height: 52, display: 'flex', flexDirection: 'column', gap: 4
+                    }}>
                     <s.icon size={20} /><span>{s.label}</span>
                   </Button>
                 ))}
               </Flex>
 
-              <Flex gap={10} mb={24}>
-                {socialButtons.slice(3).map((s) => (
-                  <Button key={s.label} fullWidth variant="default" radius={8}
-                    style={{ border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontWeight: 500, fontSize: 13, height: 52, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <s.icon size={20} /><span>{s.label}</span>
-                  </Button>
-                ))}
-              </Flex>
+{/* SSO, Passkey */}
+<Flex gap={10} mb={8}>
+  {socialButtons.slice(3).map((s) => (
+    <Button
+      key={s.label} fullWidth variant="default" radius={8}
+      onClick={() => handleSocialClick(s.label)}
+      loading={s.label === 'Passkey' && passkeyLoading}
+      style={{
+        border: s.label === 'Passkey' ? '1px solid #bbf7d0' : '1px solid #e5e7eb',
+        background: s.label === 'Passkey' ? '#f0fdf4' : '#fff',
+        color: s.label === 'Passkey' ? BRAND : '#374151',
+        fontWeight: 500, fontSize: 13,
+        height: 52, display: 'flex', flexDirection: 'column', gap: 4
+      }}>
+      <s.icon size={20} /><span>{s.label}</span>
+    </Button>
+  ))}
+</Flex>
+
+{/* Passkey hint */}
+<Flex align="center" gap={6} mb={16} px={4}>
+  <Text size="xs" style={{ color: '#9ca3af', lineHeight: 1.5 }}>
+    🔑 First time? Log in with email OTP, then go to{' '}
+    <span style={{ color: BRAND, fontWeight: 600 }}>Settings → Security</span>
+    {' '}to register your passkey.
+  </Text>
+</Flex>
+
+              {/* Error shown above divider for passkey errors */}
+              {error && (
+                <Text size="sm" ta="center" style={{ color: '#dc2626', marginBottom: 12 }}>
+                  {error}
+                </Text>
+              )}
 
               <Divider
                 label={<Text size="xs" style={{ color: '#9ca3af' }}>or continue with</Text>}
@@ -149,13 +225,17 @@ export default function Login() {
                     label="Email" placeholder="Enter your email"
                     value={email} onChange={(e) => { setEmail(e.target.value); setError('') }}
                     required type="email" styles={inputStyles}
-                    error={error}
                   />
                   <Text size="xs" style={{ color: '#9ca3af', marginTop: -8 }}>
                     Use an organization email to easily collaborate with teammates
                   </Text>
-                  <Button type="submit" fullWidth loading={loading} radius={8}
-                    style={{ background: BRAND, color: '#fff', fontWeight: 600, fontSize: 14, height: 42, border: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                  <Button
+                    type="submit" fullWidth loading={loading} radius={8}
+                    style={{
+                      background: BRAND, color: '#fff', fontWeight: 600,
+                      fontSize: 14, height: 42, border: 'none',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    }}>
                     Continue
                   </Button>
                 </Stack>
@@ -178,10 +258,15 @@ export default function Login() {
                   }}
                 />
 
-                {error && <Text size="sm" style={{ color: 'red' }}>{error}</Text>}
+                {error && <Text size="sm" style={{ color: '#dc2626' }}>{error}</Text>}
 
-                <Button type="submit" fullWidth loading={loading} radius={8}
-                  style={{ background: BRAND, color: '#fff', fontWeight: 600, fontSize: 14, height: 42, border: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <Button
+                  type="submit" fullWidth loading={loading} radius={8}
+                  style={{
+                    background: BRAND, color: '#fff', fontWeight: 600,
+                    fontSize: 14, height: 42, border: 'none',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                  }}>
                   Continue
                 </Button>
 
@@ -190,11 +275,15 @@ export default function Login() {
                   {resendTimer > 0 ? (
                     <Text size="sm" style={{ color: '#9ca3af' }}>Resend in {resendTimer}s</Text>
                   ) : (
-                    <Anchor size="sm" style={{ color: BRAND, fontWeight: 600 }} onClick={handleResend}>Resend</Anchor>
+                    <Anchor size="sm" style={{ color: BRAND, fontWeight: 600 }} onClick={handleResend}>
+                      Resend
+                    </Anchor>
                   )}
                 </Flex>
 
-                <Anchor size="sm" style={{ color: '#6b7280' }} onClick={() => { setStep('email'); setCode(''); setError('') }}>
+                <Anchor
+                  size="sm" style={{ color: '#6b7280' }}
+                  onClick={() => { setStep('email'); setCode(''); setError('') }}>
                   ← Use a different email
                 </Anchor>
               </Stack>

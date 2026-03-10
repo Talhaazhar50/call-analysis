@@ -19,6 +19,17 @@ const userSchema = new mongoose.Schema(
     },
     otp: { type: String, default: null },
     otpExpiry: { type: Date, default: null },
+
+    // Passkey fields
+    passkeys: [
+      {
+        credentialID: { type: String, required: true },
+        credentialPublicKey: { type: String, required: true }, // base64
+        counter: { type: Number, default: 0 },
+        transports: [{ type: String }],
+      },
+    ],
+    currentChallenge: { type: String, default: null },
   },
   { timestamps: true },
 );

@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
+import { startRegistration } from '@simplewebauthn/browser'
+import axios from 'axios'
+import { useAuth } from '../../context/AuthContext'
 
 import {
     Box, Flex, Text, Title, Button, Paper, Stack,
@@ -7,10 +10,11 @@ import {
 } from '@mantine/core'
 import {
     IconBuilding, IconBell, IconShield, IconAlertTriangle,
-    IconCheck, IconUpload, IconBrain, IconTrash, IconRefresh,
+    IconCheck, IconUpload, IconBrain, IconTrash, IconRefresh, IconFingerprint,
 } from '@tabler/icons-react'
 
 const BRAND = '#16a34a'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 function SectionHeader({ icon: Icon, title, description, C, danger }) {
     return (
@@ -45,6 +49,8 @@ function SettingRow({ label, description, children, C }) {
 
 export default function Settings() {
     const { C } = useOutletContext()
+    const { user } = useAuth()
+
     const [saved, setSaved] = useState(false)
     const [dangerModal, setDangerModal] = useState(null)
 
@@ -64,9 +70,69 @@ export default function Settings() {
     const [require2FA, setRequire2FA] = useState(false)
     const [allowSocial, setAllowSocial] = useState(true)
 
+    // Passkey states
+    const [passkeyLoading, setPasskeyLoading] = useState(false)
+    const [passkeySuccess, setPasskeySuccess] = useState(false)
+    const [passkeyError, setPasskeyError] = useState('')
+    const [passkeys, setPasskeys] = useState([])
+
+    useEffect(() => {
+        const fetchPasskeys = async () => {
+            try {
+                const token = localStorage.getItem('token')
+                const { data } = await axios.get(`${API}/auth/passkeys`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+                setPasskeys(data)
+            } catch (err) {
+                console.error('Failed to fetch passkeys', err)
+            }
+        }
+        fetchPasskeys()
+    }, [])
+
     const handleSave = () => {
         setSaved(true)
         setTimeout(() => setSaved(false), 2500)
+    }
+
+    const handleRegisterPasskey = async () => {
+        if (!user?.email) return
+        setPasskeyLoading(true)
+        setPasskeyError('')
+        setPasskeySuccess(false)
+        try {
+            const { data: options } = await axios.post(`${API}/auth/passkey/register-options`, { email: user.email })
+            const registrationResponse = await startRegistration({ optionsJSON: options })
+            await axios.post(`${API}/auth/passkey/register-verify`, { email: user.email, registrationResponse })
+            setPasskeySuccess(true)
+            // Refresh passkeys list
+            const token = localStorage.getItem('token')
+            const { data } = await axios.get(`${API}/auth/passkeys`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            setPasskeys(data)
+        } catch (err) {
+            if (err.name === 'NotAllowedError') {
+                setPasskeyError('Registration was cancelled')
+            } else {
+                setPasskeyError(err.message || err.response?.data?.message || 'Failed to register passkey')
+            }
+        } finally {
+            setPasskeyLoading(false)
+        }
+    }
+
+    const handleDeletePasskey = async (credentialID) => {
+        try {
+            const token = localStorage.getItem('token')
+            await axios.delete(`${API}/auth/passkey/${credentialID}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            setPasskeys(prev => prev.filter(pk => pk.credentialID !== credentialID))
+        } catch (err) {
+            setPasskeyError(err.response?.data?.message || 'Failed to delete passkey')
+        }
     }
 
     const inputStyles = {
@@ -127,30 +193,21 @@ export default function Settings() {
                     <Stack gap={16}>
                         <Flex gap={16} style={{ flexWrap: 'wrap' }}>
                             <TextInput
-                                label="Platform Name"
-                                placeholder="e.g. CallAnalytics"
-                                value={platformName}
-                                onChange={(e) => setPlatformName(e.target.value)}
-                                style={{ flex: 1, minWidth: 200 }}
-                                styles={inputStyles}
+                                label="Platform Name" placeholder="e.g. CallAnalytics"
+                                value={platformName} onChange={(e) => setPlatformName(e.target.value)}
+                                style={{ flex: 1, minWidth: 200 }} styles={inputStyles}
                             />
                             <TextInput
-                                label="Company Name"
-                                placeholder="e.g. Acme Corp"
-                                value={companyName}
-                                onChange={(e) => setCompanyName(e.target.value)}
-                                style={{ flex: 1, minWidth: 200 }}
-                                styles={inputStyles}
+                                label="Company Name" placeholder="e.g. Acme Corp"
+                                value={companyName} onChange={(e) => setCompanyName(e.target.value)}
+                                style={{ flex: 1, minWidth: 200 }} styles={inputStyles}
                             />
                         </Flex>
                         <Flex gap={16} style={{ flexWrap: 'wrap' }}>
                             <Select
-                                label="Timezone"
-                                placeholder="Select timezone"
-                                value={timezone}
-                                onChange={(v) => setTimezone(v || 'UTC')}
-                                style={{ flex: 1, minWidth: 200 }}
-                                styles={inputStyles}
+                                label="Timezone" placeholder="Select timezone"
+                                value={timezone} onChange={(v) => setTimezone(v || 'UTC')}
+                                style={{ flex: 1, minWidth: 200 }} styles={inputStyles}
                                 data={[
                                     { value: 'UTC', label: 'UTC' },
                                     { value: 'America/New_York', label: 'Eastern Time (ET)' },
@@ -164,12 +221,9 @@ export default function Settings() {
                                 ]}
                             />
                             <Select
-                                label="Date Format"
-                                placeholder="Select format"
-                                value={dateFormat}
-                                onChange={(v) => setDateFormat(v || 'MM/DD/YYYY')}
-                                style={{ flex: 1, minWidth: 200 }}
-                                styles={inputStyles}
+                                label="Date Format" placeholder="Select format"
+                                value={dateFormat} onChange={(v) => setDateFormat(v || 'MM/DD/YYYY')}
+                                style={{ flex: 1, minWidth: 200 }} styles={inputStyles}
                                 data={[
                                     { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' },
                                     { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY' },
@@ -177,12 +231,8 @@ export default function Settings() {
                                 ]}
                             />
                         </Flex>
-
-                        {/* Logo Upload */}
                         <Box>
-                            <Text style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 8 }}>
-                                Company Logo
-                            </Text>
+                            <Text style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 8 }}>Company Logo</Text>
                             <Flex align="center" gap={14}>
                                 <Box style={{
                                     width: 52, height: 52, borderRadius: 12,
@@ -192,10 +242,7 @@ export default function Settings() {
                                     <Text style={{ fontWeight: 800, fontSize: 18, color: BRAND }}>A</Text>
                                 </Box>
                                 <Button variant="default" radius={8} leftSection={<IconUpload size={14} />}
-                                    style={{
-                                        border: `1px solid ${C.inputBorder}`, color: C.text,
-                                        fontWeight: 500, fontSize: 13, height: 38, background: C.inputBg,
-                                    }}>
+                                    style={{ border: `1px solid ${C.inputBorder}`, color: C.text, fontWeight: 500, fontSize: 13, height: 38, background: C.inputBg }}>
                                     Upload Logo
                                 </Button>
                                 <Text style={{ fontSize: 12, color: C.subtle }}>PNG or SVG, max 2MB</Text>
@@ -212,9 +259,7 @@ export default function Settings() {
                             <Flex justify="space-between" align="center" mb={12}>
                                 <Box>
                                     <Text style={{ fontSize: 14, fontWeight: 500, color: C.text }}>Pass Threshold</Text>
-                                    <Text style={{ fontSize: 12, color: C.subtle, marginTop: 2 }}>
-                                        Minimum score required to pass a call
-                                    </Text>
+                                    <Text style={{ fontSize: 12, color: C.subtle, marginTop: 2 }}>Minimum score required to pass a call</Text>
                                 </Box>
                                 <Badge radius={8} style={{
                                     background: '#f0fdf4', color: BRAND,
@@ -239,23 +284,16 @@ export default function Settings() {
                                 mb={8}
                             />
                         </Box>
-
                         <Divider style={{ borderColor: C.border }} />
-
                         <SettingRow label="Auto-Analyze on Upload" description="Automatically score calls when uploaded by agents" C={C}>
                             <Switch checked={autoAnalyze} onChange={() => setAutoAnalyze(p => !p)} color="green" size="md" />
                         </SettingRow>
-
                         <Divider style={{ borderColor: C.border }} />
-
                         <Flex gap={16} style={{ flexWrap: 'wrap' }}>
                             <Select
-                                label="AI Model"
-                                placeholder="Select model"
-                                value={aiModel}
-                                onChange={(v) => setAiModel(v || 'claude')}
-                                style={{ flex: 1, minWidth: 200 }}
-                                styles={inputStyles}
+                                label="AI Model" placeholder="Select model"
+                                value={aiModel} onChange={(v) => setAiModel(v || 'claude')}
+                                style={{ flex: 1, minWidth: 200 }} styles={inputStyles}
                                 data={[
                                     { value: 'claude', label: 'Claude (Anthropic)' },
                                     { value: 'gpt4', label: 'GPT-4 (OpenAI)' },
@@ -263,12 +301,9 @@ export default function Settings() {
                                 ]}
                             />
                             <Select
-                                label="Score Rounding"
-                                placeholder="Select rounding"
-                                value={scoreRounding}
-                                onChange={(v) => setScoreRounding(v || 'whole')}
-                                style={{ flex: 1, minWidth: 200 }}
-                                styles={inputStyles}
+                                label="Score Rounding" placeholder="Select rounding"
+                                value={scoreRounding} onChange={(v) => setScoreRounding(v || 'whole')}
+                                style={{ flex: 1, minWidth: 200 }} styles={inputStyles}
                                 data={[
                                     { value: 'whole', label: 'Whole numbers (78%)' },
                                     { value: 'decimal1', label: 'One decimal (78.4%)' },
@@ -304,12 +339,9 @@ export default function Settings() {
                     <SectionHeader icon={IconShield} title="Security" description="Authentication and session management" C={C} />
                     <Stack gap={16}>
                         <Select
-                            label="Session Timeout"
-                            placeholder="Select timeout"
-                            value={sessionTimeout}
-                            onChange={(v) => setSessionTimeout(v || '8h')}
-                            style={{ maxWidth: 240 }}
-                            styles={inputStyles}
+                            label="Session Timeout" placeholder="Select timeout"
+                            value={sessionTimeout} onChange={(v) => setSessionTimeout(v || '8h')}
+                            style={{ maxWidth: 240 }} styles={inputStyles}
                             data={[
                                 { value: '1h', label: '1 hour' },
                                 { value: '4h', label: '4 hours' },
@@ -326,6 +358,86 @@ export default function Settings() {
                         <SettingRow label="Allow Social Login" description="Users can sign in with Google, Apple, or Microsoft" C={C}>
                             <Switch checked={allowSocial} onChange={() => setAllowSocial(p => !p)} color="green" size="md" />
                         </SettingRow>
+                        <Divider style={{ borderColor: C.border }} />
+
+                        {/* ── Passkey ── */}
+                        <SettingRow
+                            label="Passkey (Biometric Login)"
+                            description={
+                                passkeys.length > 0
+                                    ? `${passkeys.length} passkey${passkeys.length > 1 ? 's' : ''} registered on this account`
+                                    : 'Register your fingerprint or Face ID to sign in without a code'
+                            }
+                            C={C}
+                        >
+                            <Flex align="center" gap={10}>
+                                {passkeySuccess && (
+                                    <Flex align="center" gap={4}>
+                                        <IconCheck size={14} color={BRAND} />
+                                        <Text size="xs" style={{ color: BRAND, fontWeight: 600 }}>Registered!</Text>
+                                    </Flex>
+                                )}
+                                {passkeyError && (
+                                    <Text size="xs" style={{ color: '#dc2626', maxWidth: 160 }}>{passkeyError}</Text>
+                                )}
+                                <Button
+                                    radius={8}
+                                    loading={passkeyLoading}
+                                    onClick={handleRegisterPasskey}
+                                    leftSection={!passkeyLoading ? <IconFingerprint size={15} /> : null}
+                                    style={{
+                                        background: '#f0fdf4', color: BRAND,
+                                        border: '1px solid #bbf7d0',
+                                        fontWeight: 600, fontSize: 13, height: 36,
+                                    }}
+                                >
+                                    {passkeys.length > 0 ? '✓ Registered — Add Another' : 'Register Passkey'}
+                                </Button>
+                            </Flex>
+                        </SettingRow>
+
+                        {/* Registered passkeys list */}
+                        {passkeys.length > 0 && (
+                            <Box style={{
+                                background: '#f9fafb', borderRadius: 10,
+                                border: `1px solid ${C.border}`, overflow: 'hidden'
+                            }}>
+                                {passkeys.map((pk, i) => (
+                                    <Flex key={pk.credentialID} justify="space-between" align="center"
+                                        px={16} py={12}
+                                        style={{ borderBottom: i < passkeys.length - 1 ? `1px solid ${C.border}` : 'none' }}
+                                    >
+                                        <Flex align="center" gap={10}>
+                                            <Box style={{
+                                                width: 32, height: 32, borderRadius: 8,
+                                                background: '#f0fdf4', border: '1px solid #bbf7d0',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            }}>
+                                                <IconFingerprint size={16} color={BRAND} />
+                                            </Box>
+                                            <Box>
+                                                <Text style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{pk.label}</Text>
+                                                <Text style={{ fontSize: 11, color: C.subtle }}>
+                                                    Added {new Date(pk.createdAt).toLocaleDateString()}
+                                                </Text>
+                                            </Box>
+                                        </Flex>
+                                        <Button
+                                            variant="default" radius={8} size="xs"
+                                            onClick={() => handleDeletePasskey(pk.credentialID)}
+                                            leftSection={<IconTrash size={12} />}
+                                            style={{
+                                                border: '1px solid #fecaca', color: '#dc2626',
+                                                background: '#fff', fontWeight: 500
+                                            }}
+                                        >
+                                            Remove
+                                        </Button>
+                                    </Flex>
+                                ))}
+                            </Box>
+                        )}
+
                     </Stack>
                 </Paper>
 
