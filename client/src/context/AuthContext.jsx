@@ -30,6 +30,13 @@ export const AuthProvider = ({ children }) => {
         return user
     }
 
+    // Used by passkey / OAuth logins
+    const login = (token, userData) => {
+        localStorage.setItem('token', token)
+        localStorage.setItem('user', JSON.stringify(userData))
+        setUser(userData)
+    }
+
     const logout = () => {
         localStorage.removeItem('token')
         localStorage.removeItem('user')
@@ -37,7 +44,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     return (
-        <AuthContext.Provider value={{ user, loading, sendCode, verifyCode, logout }}>
+        <AuthContext.Provider value={{ user, loading, sendCode, verifyCode, login, logout }}>
             {children}
         </AuthContext.Provider>
     )

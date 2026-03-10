@@ -9,6 +9,8 @@ const navItems = [
     { path: '/dashboard', icon: '▦', label: 'Dashboard' },
     { path: '/dashboard/upload', icon: '⬆', label: 'Upload Call' },
     { path: '/dashboard/calls', icon: '🎧', label: 'My Calls' },
+    { path: '/dashboard/settings', icon: '⚙️', label: 'Settings' },
+
 ]
 
 export default function UserLayout() {
