@@ -8,6 +8,7 @@ import express from "express";
 import morgan from "morgan";
 import passport from "passport";
 import scorecardRoutes from "./routes/Scorecard.routes.js";
+import userRoutes from "./routes/user.routes.js";
 import { connectDB } from "./config,/db.js";
 import { initGoogleStrategy } from "./controllers/Google.controller.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -30,6 +31,7 @@ app.use(passport.initialize());
 app.use("/api/auth", authRoutes);
 app.use("/api/scorecards", scorecardRoutes);
 app.use("/api/calls", callRoutes);
+app.use("/api/users", userRoutes);
 
 app.use(errorHandler);
 
