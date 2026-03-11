@@ -20,6 +20,9 @@ const userSchema = new mongoose.Schema(
     otp: { type: String, default: null },
     otpExpiry: { type: Date, default: null },
 
+    // Google OAuth
+    googleId: { type: String, default: null },
+
     // Passkey fields
     passkeys: [
       {
