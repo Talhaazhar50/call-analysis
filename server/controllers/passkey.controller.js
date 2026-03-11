@@ -1,18 +1,18 @@
+import User from "../models/User.model.js";
+import jwt from "jsonwebtoken";
+
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
   generateAuthenticationOptions,
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
-import User from "../models/User.model.js";
-import jwt from "jsonwebtoken";
 
-const RP_NAME = "CallAnalytics"
-const RP_ID = process.env.RP_ID || "localhost"
-const ORIGIN = process.env.ORIGIN || "http://localhost:5173"
-console.log("RP_ID:", process.env.RP_ID)
-console.log("ORIGIN:", process.env.ORIGIN)
-
+const RP_NAME = "CallAnalytics";
+const RP_ID = process.env.RP_ID || "localhost";
+const ORIGIN = process.env.ORIGIN || "http://localhost:5173";
+console.log("RP_ID:", process.env.RP_ID);
+console.log("ORIGIN:", process.env.ORIGIN);
 
 const signToken = (user) =>
   jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
@@ -105,41 +105,47 @@ export const getLoginOptions = async (req, res) => {
       rpID: RP_ID,
       userVerification: "preferred",
       // No allowCredentials = browser shows all saved passkeys for this site
-    })
+    });
 
     // Store challenge in a temp cookie/session since we don't know user yet
-    res.cookie('passkey_challenge', options.challenge, {
+    res.cookie("passkey_challenge", options.challenge, {
       httpOnly: true,
       maxAge: 5 * 60 * 1000, // 5 mins
-      sameSite: 'lax',
-    })
+      sameSite: "lax",
+    });
 
-    res.json(options)
+    res.json(options);
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(500).json({ message: err.message });
   }
-}
+};
 
 // POST /api/auth/passkey/login-verify
 // POST /api/auth/passkey/login-verify
 export const verifyLogin = async (req, res) => {
   try {
-    const { authResponse } = req.body
-    const challenge = req.cookies?.passkey_challenge
+    const { authResponse } = req.body;
+    const challenge = req.cookies?.passkey_challenge;
 
-    console.log('challenge from cookie:', challenge)        // add
-    console.log('authResponse.id:', authResponse?.id)       // add
+    console.log("challenge from cookie:", challenge); // add
+    console.log("authResponse.id:", authResponse?.id); // add
 
-    if (!challenge) return res.status(400).json({ message: 'Challenge expired, try again' })
+    if (!challenge)
+      return res.status(400).json({ message: "Challenge expired, try again" });
 
     // Find user by credentialID — no email needed
     const user = await User.findOne({
-      'passkeys.credentialID': authResponse.id
-    })
+      "passkeys.credentialID": authResponse.id,
+    });
 
-    if (!user) return res.status(400).json({ message: 'No passkey found for this device' })
+    if (!user)
+      return res
+        .status(400)
+        .json({ message: "No passkey found for this device" });
 
-    const passkey = user.passkeys.find(pk => pk.credentialID === authResponse.id)
+    const passkey = user.passkeys.find(
+      (pk) => pk.credentialID === authResponse.id,
+    );
 
     const verification = await verifyAuthenticationResponse({
       response: authResponse,
@@ -148,61 +154,68 @@ export const verifyLogin = async (req, res) => {
       expectedRPID: RP_ID,
       credential: {
         id: passkey.credentialID,
-        publicKey: Buffer.from(passkey.credentialPublicKey, 'base64'),
+        publicKey: Buffer.from(passkey.credentialPublicKey, "base64"),
         counter: passkey.counter,
         transports: passkey.transports,
       },
-    })
+    });
 
     if (!verification.verified)
-      return res.status(400).json({ message: 'Authentication failed' })
+      return res.status(400).json({ message: "Authentication failed" });
 
-    passkey.counter = verification.authenticationInfo.newCounter
-    await user.save()
+    passkey.counter = verification.authenticationInfo.newCounter;
+    await user.save();
 
     // Clear challenge cookie
-    res.clearCookie('passkey_challenge')
+    res.clearCookie("passkey_challenge");
 
-    const token = signToken(user)
+    const token = signToken(user);
     res.json({
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
-    })
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(500).json({ message: err.message });
   }
-}
+};
 
 // DELETE /api/auth/passkey/:credentialID
 export const deletePasskey = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-    if (!user) return res.status(404).json({ message: 'User not found' })
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    const before = user.passkeys.length
-    user.passkeys = user.passkeys.filter(pk => pk.credentialID !== req.params.credentialID)
+    const before = user.passkeys.length;
+    user.passkeys = user.passkeys.filter(
+      (pk) => pk.credentialID !== req.params.credentialID,
+    );
 
     if (user.passkeys.length === before)
-      return res.status(404).json({ message: 'Passkey not found' })
+      return res.status(404).json({ message: "Passkey not found" });
 
-    await user.save()
-    res.json({ message: 'Passkey deleted' })
+    await user.save();
+    res.json({ message: "Passkey deleted" });
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(500).json({ message: err.message });
   }
-}
+};
 
 // GET /api/auth/passkeys
 export const getPasskeys = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
+    const user = await User.findById(req.user._id);
     const passkeys = user.passkeys.map((pk, i) => ({
       credentialID: pk.credentialID,
       label: `Passkey ${i + 1}`,
       createdAt: pk._id.getTimestamp(),
-    }))
-    res.json(passkeys)
+    }));
+    res.json(passkeys);
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(500).json({ message: err.message });
   }
-}
+};

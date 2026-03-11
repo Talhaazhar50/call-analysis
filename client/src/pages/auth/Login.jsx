@@ -1,12 +1,13 @@
-import { startAuthentication } from '@simplewebauthn/browser'
+import axios from "axios";
+import { startAuthentication } from "@simplewebauthn/browser";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+
 import {
   IconBrandApple, IconBrandGoogle, IconBrandWindows,
   IconBuilding, IconFingerprint, IconHeadphones
 } from "@tabler/icons-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import axios from 'axios'
 
 import {
   TextInput, Button, Title, Text, Stack, Box,
@@ -26,6 +27,7 @@ const socialButtons = [
 
 export default function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { sendCode, verifyCode, login } = useAuth()
 
   const [step, setStep] = useState('email')
@@ -35,6 +37,12 @@ export default function Login() {
   const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [error, setError] = useState('')
   const [resendTimer, setResendTimer] = useState(0)
+
+  // Show error from Google OAuth redirect (e.g. account deactivated)
+  useEffect(() => {
+    const oauthError = searchParams.get('error')
+    if (oauthError) setError(decodeURIComponent(oauthError))
+  }, [])
 
   const startResendTimer = () => {
     setResendTimer(18)
@@ -87,40 +95,43 @@ export default function Login() {
     }
   }
 
-const handlePasskey = async () => {
-  setPasskeyLoading(true)
-  setError('')
-  try {
-    // No email needed
-const { data: options } = await axios.post(
-  `${API}/auth/passkey/login-options`, 
-  {},
-  { withCredentials: true }  // <-- add this
-)
-    // Browser shows passkey picker automatically
-const authResponse = await startAuthentication({ optionsJSON: options })
-
-    // No email in body
-const { data } = await axios.post(
-  `${API}/auth/passkey/login-verify`, 
-  { authResponse },
-  { withCredentials: true }  // <-- add this
-)
-    login(data.token, data.user)
-    navigate(data.user.role === 'admin' ? '/admin' : '/dashboard', { replace: true })
-  } catch (err) {
-    if (err.name === 'NotAllowedError') {
-      setError('Passkey authentication was cancelled')
-    } else {
-      setError(err.response?.data?.message || 'No passkey found on this device.')
+  const handlePasskey = async () => {
+    setPasskeyLoading(true)
+    setError('')
+    try {
+      const { data: options } = await axios.post(
+        `${API}/auth/passkey/login-options`,
+        {},
+        { withCredentials: true }
+      )
+      const authResponse = await startAuthentication({ optionsJSON: options })
+      const { data } = await axios.post(
+        `${API}/auth/passkey/login-verify`,
+        { authResponse },
+        { withCredentials: true }
+      )
+      login(data.token, data.user)
+      navigate(data.user.role === 'admin' ? '/admin' : '/dashboard', { replace: true })
+    } catch (err) {
+      if (err.name === 'NotAllowedError') {
+        setError('Passkey authentication was cancelled')
+      } else {
+        setError(err.response?.data?.message || 'No passkey found on this device.')
+      }
+    } finally {
+      setPasskeyLoading(false)
     }
-  } finally {
-    setPasskeyLoading(false)
   }
-}
+
+  const handleGoogle = () => {
+    // Redirect browser to backend — passport handles the OAuth dance
+    window.location.href = `${API}/auth/google`
+  }
+
   const handleSocialClick = (label) => {
     if (label === 'Passkey') return handlePasskey()
-    // Google, Apple, Microsoft, SSO — coming soon
+    if (label === 'Google') return handleGoogle()
+    // Apple, Microsoft, SSO — coming soon
   }
 
   const inputStyles = {
@@ -170,7 +181,8 @@ const { data } = await axios.post(
                     key={s.label} fullWidth variant="default" radius={8}
                     onClick={() => handleSocialClick(s.label)}
                     style={{
-                      border: '1px solid #e5e7eb', background: '#fff',
+                      border: s.label === 'Google' ? '1px solid #e5e7eb' : '1px solid #e5e7eb',
+                      background: '#fff',
                       color: '#374151', fontWeight: 500, fontSize: 13,
                       height: 52, display: 'flex', flexDirection: 'column', gap: 4
                     }}>
@@ -179,35 +191,35 @@ const { data } = await axios.post(
                 ))}
               </Flex>
 
-{/* SSO, Passkey */}
-<Flex gap={10} mb={8}>
-  {socialButtons.slice(3).map((s) => (
-    <Button
-      key={s.label} fullWidth variant="default" radius={8}
-      onClick={() => handleSocialClick(s.label)}
-      loading={s.label === 'Passkey' && passkeyLoading}
-      style={{
-        border: s.label === 'Passkey' ? '1px solid #bbf7d0' : '1px solid #e5e7eb',
-        background: s.label === 'Passkey' ? '#f0fdf4' : '#fff',
-        color: s.label === 'Passkey' ? BRAND : '#374151',
-        fontWeight: 500, fontSize: 13,
-        height: 52, display: 'flex', flexDirection: 'column', gap: 4
-      }}>
-      <s.icon size={20} /><span>{s.label}</span>
-    </Button>
-  ))}
-</Flex>
+              {/* SSO, Passkey */}
+              <Flex gap={10} mb={8}>
+                {socialButtons.slice(3).map((s) => (
+                  <Button
+                    key={s.label} fullWidth variant="default" radius={8}
+                    onClick={() => handleSocialClick(s.label)}
+                    loading={s.label === 'Passkey' && passkeyLoading}
+                    style={{
+                      border: s.label === 'Passkey' ? '1px solid #bbf7d0' : '1px solid #e5e7eb',
+                      background: s.label === 'Passkey' ? '#f0fdf4' : '#fff',
+                      color: s.label === 'Passkey' ? BRAND : '#374151',
+                      fontWeight: 500, fontSize: 13,
+                      height: 52, display: 'flex', flexDirection: 'column', gap: 4
+                    }}>
+                    <s.icon size={20} /><span>{s.label}</span>
+                  </Button>
+                ))}
+              </Flex>
 
-{/* Passkey hint */}
-<Flex align="center" gap={6} mb={16} px={4}>
-  <Text size="xs" style={{ color: '#9ca3af', lineHeight: 1.5 }}>
-    🔑 First time? Log in with email OTP, then go to{' '}
-    <span style={{ color: BRAND, fontWeight: 600 }}>Settings → Security</span>
-    {' '}to register your passkey.
-  </Text>
-</Flex>
+              {/* Passkey hint */}
+              <Flex align="center" gap={6} mb={16} px={4}>
+                <Text size="xs" style={{ color: '#9ca3af', lineHeight: 1.5 }}>
+                  🔑 First time? Log in with email OTP, then go to{' '}
+                  <span style={{ color: BRAND, fontWeight: 600 }}>Settings → Security</span>
+                  {' '}to register your passkey.
+                </Text>
+              </Flex>
 
-              {/* Error shown above divider for passkey errors */}
+              {/* Error shown above divider */}
               {error && (
                 <Text size="sm" ta="center" style={{ color: '#dc2626', marginBottom: 12 }}>
                   {error}
@@ -215,7 +227,7 @@ const { data } = await axios.post(
               )}
 
               <Divider
-                label={<Text size="xs" style={{ color: '#9ca3af' }}>or continue with</Text>}
+                label={<Text size="xs" style={{ color: '#9ca3af' }}>or continue with email</Text>}
                 labelPosition="center" mb={20} style={{ borderColor: '#f3f4f6' }}
               />
 
@@ -267,44 +279,26 @@ const { data } = await axios.post(
                     fontSize: 14, height: 42, border: 'none',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
                   }}>
-                  Continue
+                  Verify code
                 </Button>
 
                 <Flex align="center" gap={6}>
                   <Text size="sm" style={{ color: '#6b7280' }}>Didn't receive a code?</Text>
-                  {resendTimer > 0 ? (
-                    <Text size="sm" style={{ color: '#9ca3af' }}>Resend in {resendTimer}s</Text>
-                  ) : (
-                    <Anchor size="sm" style={{ color: BRAND, fontWeight: 600 }} onClick={handleResend}>
-                      Resend
-                    </Anchor>
-                  )}
+                  {resendTimer > 0
+                    ? <Text size="sm" style={{ color: '#9ca3af' }}>Resend in {resendTimer}s</Text>
+                    : <Anchor size="sm" style={{ color: BRAND, fontWeight: 600 }} onClick={handleResend}>Resend</Anchor>
+                  }
                 </Flex>
 
-                <Anchor
-                  size="sm" style={{ color: '#6b7280' }}
-                  onClick={() => { setStep('email'); setCode(''); setError('') }}>
-                  ← Use a different email
+                <Anchor size="sm" style={{ color: '#6b7280' }} onClick={() => { setStep('email'); setCode(''); setError('') }}>
+                  ← Back to login
                 </Anchor>
               </Stack>
             </form>
           )}
 
-          <Text ta="center" size="xs" mt={32} style={{ color: '#9ca3af', lineHeight: 1.6 }}>
-            By continuing, you acknowledge that you understand and agree to our{' '}
-            <Anchor size="xs" style={{ color: '#6b7280' }}>Terms & Conditions</Anchor>{' '}and{' '}
-            <Anchor size="xs" style={{ color: '#6b7280' }}>Privacy Policy</Anchor>
-          </Text>
-
         </Box>
       </Flex>
-
-      <Flex justify="center" gap={24} py={20} style={{ borderTop: '1px solid #f3f4f6' }}>
-        {['Privacy Policy', 'Terms of Service', 'Help Center'].map((item) => (
-          <Anchor key={item} size="xs" style={{ color: '#9ca3af' }}>{item}</Anchor>
-        ))}
-      </Flex>
-
     </Box>
   )
 }

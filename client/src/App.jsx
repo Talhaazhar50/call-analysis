@@ -2,6 +2,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLayout from "./pages/admin/AdminLayout";
 import CallResults from "./pages/user/CallResults";
 import Calls from "./pages/admin/Calls";
+import GoogleCallback from "./pages/auth/GoogleCallback";
 import Home from "./pages/Home";
 import Login from "./pages/auth/Login";
 import MyCalls from "./pages/user/MyCalls";
@@ -27,6 +28,7 @@ function App() {
       </Route>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/auth/google/callback" element={<GoogleCallback />} />
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<User />} />
@@ -37,7 +39,7 @@ function App() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  )
+  );
 }
 
-export default App
+export default App;
