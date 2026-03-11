@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { getColors } from "../../styles/theme";
 
@@ -10,14 +11,23 @@ const navItems = [
     { path: '/dashboard/upload', icon: '⬆', label: 'Upload Call' },
     { path: '/dashboard/calls', icon: '🎧', label: 'My Calls' },
     { path: '/dashboard/settings', icon: '⚙️', label: 'Settings' },
-
 ]
 
 export default function UserLayout() {
     const { dark, toggle } = useTheme()
     const C = getColors(dark)
     const navigate = useNavigate()
+    const { user, logout } = useAuth()
     const [collapsed, setCollapsed] = useState(false)
+
+    const displayName = user?.name || user?.email?.split('@')[0] || 'User'
+    const role = user?.role === 'admin' ? 'Admin' : 'Agent'
+    const initials = displayName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+
+    const handleSignOut = () => {
+        logout()
+        navigate('/login')
+    }
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: C.bg, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
@@ -104,7 +114,6 @@ export default function UserLayout() {
 
                 {/* Bottom */}
                 <div style={{ padding: '12px 8px', borderTop: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {/* Dark mode toggle */}
                     {!collapsed && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px' }}>
                             <span style={{ fontSize: 13, color: C.muted }}>{dark ? '🌙 Dark' : '☀️ Light'}</span>
@@ -115,20 +124,20 @@ export default function UserLayout() {
                         </div>
                     )}
 
-                    {/* User avatar */}
+                    {/* User avatar — real data */}
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '8px 12px', borderRadius: 8,
-                        background: C.hover, cursor: 'pointer',
+                        background: C.hover,
                         justifyContent: collapsed ? 'center' : 'flex-start',
                     }}>
                         <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#7c3aed20', border: '1.5px solid #7c3aed40', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed' }}>SA</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed' }}>{initials}</span>
                         </div>
                         {!collapsed && (
                             <div style={{ minWidth: 0 }}>
-                                <div style={{ fontSize: 12, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Sarah Ahmed</div>
-                                <div style={{ fontSize: 10, color: C.muted }}>Agent</div>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
+                                <div style={{ fontSize: 10, color: C.muted }}>{role}</div>
                             </div>
                         )}
                     </div>
@@ -136,10 +145,10 @@ export default function UserLayout() {
                     {/* Sign out */}
                     {!collapsed && (
                         <button
-                            onClick={() => navigate('/login')}
-                            style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '7px 12px', borderRadius: 8, fontSize: 13, color: C.muted, textAlign: 'left', transition: 'background 0.15s' }}
-                            onMouseEnter={e => e.target.style.background = C.hover}
-                            onMouseLeave={e => e.target.style.background = 'none'}
+                            onClick={handleSignOut}
+                            style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '7px 12px', borderRadius: 8, fontSize: 13, color: C.muted, textAlign: 'left', transition: 'background 0.15s', fontFamily: 'DM Sans, sans-serif' }}
+                            onMouseEnter={e => e.currentTarget.style.background = C.hover}
+                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
                         >
                             ↩ Sign out
                         </button>

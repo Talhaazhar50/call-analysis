@@ -1,18 +1,17 @@
 import "express-async-errors";
+import "./config,/Env.js";
 import authRoutes from "./routes/auth.routes.js";
+import callRoutes from "./routes/Call.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import dotenv from "dotenv";
 import express from "express";
 import morgan from "morgan";
 import passport from "passport";
+import scorecardRoutes from "./routes/Scorecard.routes.js";
 import { connectDB } from "./config,/db.js";
 import { initGoogleStrategy } from "./controllers/Google.controller.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
-dotenv.config();
-
-// Initialize passport strategies
 initGoogleStrategy();
 
 const app = express();
@@ -29,10 +28,12 @@ app.use(morgan("dev"));
 app.use(passport.initialize());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/scorecards", scorecardRoutes);
+app.use("/api/calls", callRoutes);
 
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
 connectDB().then(() => {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 });
