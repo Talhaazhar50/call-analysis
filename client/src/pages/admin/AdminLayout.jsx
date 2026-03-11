@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { getColors } from "../../styles/theme";
 
@@ -24,6 +25,16 @@ export default function AdminLayout() {
     const { dark, toggle } = useTheme()
     const C = getColors(dark)
     const navigate = useNavigate()
+    const { user, logout } = useAuth()
+
+    const displayName = user?.name || user?.email?.split('@')[0] || 'Admin'
+    const email = user?.email || ''
+    const initials = displayName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+
+    const handleLogout = () => {
+        logout()
+        navigate('/login')
+    }
 
     return (
         <Flex style={{ minHeight: '100vh', background: C.bg }}>
@@ -92,8 +103,7 @@ export default function AdminLayout() {
                                     e.currentTarget.style.background = C.hover
                             }}
                             onMouseLeave={(e) => {
-                                if (!e.currentTarget.style.color?.includes('brand'))
-                                    e.currentTarget.style.background = 'transparent'
+                                e.currentTarget.style.background = 'transparent'
                             }}
                         >
                             {({ isActive }) => (
@@ -145,7 +155,7 @@ export default function AdminLayout() {
                         </Box>
                     </Flex>
 
-                    {/* User + Logout */}
+                    {/* User — real data */}
                     <Flex align="center" justify="space-between" px={12} py={8}>
                         <Flex align="center" gap={8}>
                             <Box style={{
@@ -154,17 +164,25 @@ export default function AdminLayout() {
                                 border: `1.5px solid ${dark ? '#16a34a50' : '#bbf7d0'}`,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                                <Text style={{ fontSize: 11, fontWeight: 700, color: C.brand }}>AD</Text>
+                                <Text style={{ fontSize: 11, fontWeight: 700, color: C.brand }}>{initials}</Text>
                             </Box>
                             <Box>
-                                <Text style={{ fontSize: 12, fontWeight: 600, color: C.text, lineHeight: 1.2 }}>Admin</Text>
-                                <Text style={{ fontSize: 10, color: C.subtle }}>admin@acme.com</Text>
+                                <Text style={{ fontSize: 12, fontWeight: 600, color: C.text, lineHeight: 1.2 }}>
+                                    {displayName}
+                                </Text>
+                                <Text style={{
+                                    fontSize: 10, color: C.subtle,
+                                    maxWidth: 120, overflow: 'hidden',
+                                    textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                }}>
+                                    {email}
+                                </Text>
                             </Box>
                         </Flex>
                         <Tooltip label="Logout" position="right">
                             <ActionIcon
                                 variant="subtle" radius={6} size={28}
-                                onClick={() => navigate('/login')}
+                                onClick={handleLogout}
                                 style={{ color: '#ef4444' }}
                             >
                                 <IconLogout size={15} />
