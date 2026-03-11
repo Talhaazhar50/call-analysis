@@ -1,52 +1,21 @@
-import { useState } from "react";
+import axios from "axios";
+import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import {
     Box, Flex, Text, Title, Button, Badge, Paper,
     Modal, Stack, TextInput, Select, Textarea, Switch,
-    ActionIcon, Divider, Grid, Menu,
+    ActionIcon, Divider, Grid, Menu, Loader, Alert,
 } from '@mantine/core'
 import {
     IconPlus, IconEdit, IconTrash, IconDotsVertical,
-    IconClipboardList, IconGripVertical, IconX,
+    IconClipboardList, IconGripVertical, IconX, IconAlertCircle,
 } from '@tabler/icons-react'
 
 const BRAND = '#16a34a'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 const teamOptions = ['Operations', 'Finance', 'HR', 'Engineering', 'Support'].map(v => ({ value: v, label: v }))
 const categoryOptions = ['Communication', 'Compliance', 'Product Knowledge', 'Process', 'General'].map(v => ({ value: v, label: v }))
-
-const initialScorecards = [
-    {
-        id: 1, name: 'Sales QA Scorecard', description: 'Used for evaluating outbound sales calls',
-        team: 'Operations', active: true,
-        criteria: [
-            { id: 1, label: 'Proper Greeting', weight: 10, category: 'Communication' },
-            { id: 2, label: 'Needs Discovery', weight: 20, category: 'Process' },
-            { id: 3, label: 'Product Knowledge', weight: 25, category: 'Product Knowledge' },
-            { id: 4, label: 'Objection Handling', weight: 25, category: 'Process' },
-            { id: 5, label: 'Closing Technique', weight: 20, category: 'Process' },
-        ],
-    },
-    {
-        id: 2, name: 'Support QA Scorecard', description: 'Standard scorecard for customer support calls',
-        team: 'Support', active: true,
-        criteria: [
-            { id: 1, label: 'Empathy & Tone', weight: 20, category: 'Communication' },
-            { id: 2, label: 'Issue Resolution', weight: 40, category: 'Process' },
-            { id: 3, label: 'Compliance Check', weight: 20, category: 'Compliance' },
-            { id: 4, label: 'Call Closing', weight: 20, category: 'Communication' },
-        ],
-    },
-    {
-        id: 3, name: 'Onboarding QA', description: 'For new customer onboarding calls',
-        team: 'HR', active: false,
-        criteria: [
-            { id: 1, label: 'Welcome & Intro', weight: 15, category: 'Communication' },
-            { id: 2, label: 'Product Walkthrough', weight: 50, category: 'Product Knowledge' },
-            { id: 3, label: 'Next Steps Clarity', weight: 35, category: 'Process' },
-        ],
-    },
-]
 
 const emptyForm = {
     name: '', description: '', team: '', active: true,
@@ -90,11 +59,32 @@ function CriteriaRow({ criterion, onChange, onRemove, showRemove, C }) {
 
 export default function Scorecards() {
     const { C } = useOutletContext()
-    const [scorecards, setScorecards] = useState(initialScorecards)
+    const [scorecards, setScorecards] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+    const [error, setError] = useState('')
     const [modalOpen, setModalOpen] = useState(false)
     const [editId, setEditId] = useState(null)
     const [form, setForm] = useState(emptyForm)
     const [viewCard, setViewCard] = useState(null)
+
+    const token = localStorage.getItem('token')
+    const headers = { Authorization: `Bearer ${token}` }
+
+    // ── Fetch all scorecards ──
+    const fetchScorecards = async () => {
+        try {
+            setLoading(true)
+            const { data } = await axios.get(`${API}/scorecards`, { headers })
+            setScorecards(data)
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to load scorecards')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => { fetchScorecards() }, [])
 
     const totalPoints = (criteria) => criteria.reduce((s, c) => s + (parseInt(c.weight) || 0), 0)
 
@@ -105,20 +95,61 @@ export default function Scorecards() {
     }
 
     const openEdit = (card) => {
-        setEditId(card.id)
-        setForm({ name: card.name, description: card.description, team: card.team, active: card.active, criteria: card.criteria.map(c => ({ ...c })) })
+        setEditId(card._id)
+        setForm({
+            name: card.name,
+            description: card.description,
+            team: card.team,
+            active: card.active,
+            criteria: card.criteria.map(c => ({ ...c, id: c._id || Date.now() })),
+        })
         setModalOpen(true)
     }
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!form.name) return
-        if (editId) setScorecards(p => p.map(c => c.id === editId ? { ...c, ...form } : c))
-        else setScorecards(p => [...p, { id: Date.now(), ...form }])
-        setModalOpen(false)
+        const payload = {
+            ...form,
+            criteria: form.criteria
+                .filter(c => c.label)
+                .map(({ label, weight, category }) => ({ label, weight: Number(weight) || 0, category })),
+        }
+        setSaving(true)
+        try {
+            if (editId) {
+                const { data } = await axios.put(`${API}/scorecards/${editId}`, payload, { headers })
+                setScorecards(p => p.map(c => c._id === editId ? data : c))
+            } else {
+                const { data } = await axios.post(`${API}/scorecards`, payload, { headers })
+                setScorecards(p => [data, ...p])
+            }
+            setModalOpen(false)
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to save scorecard')
+        } finally {
+            setSaving(false)
+        }
     }
 
-    const handleDelete = (id) => setScorecards(p => p.filter(c => c.id !== id))
-    const handleToggle = (id) => setScorecards(p => p.map(c => c.id === id ? { ...c, active: !c.active } : c))
+    const handleDelete = async (id) => {
+        try {
+            await axios.delete(`${API}/scorecards/${id}`, { headers })
+            setScorecards(p => p.filter(c => c._id !== id))
+            if (viewCard?._id === id) setViewCard(null)
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to delete scorecard')
+        }
+    }
+
+    const handleToggle = async (id) => {
+        try {
+            const { data } = await axios.patch(`${API}/scorecards/${id}/toggle`, {}, { headers })
+            setScorecards(p => p.map(c => c._id === id ? data : c))
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to update scorecard')
+        }
+    }
+
     const addCriterion = () => setForm(p => ({ ...p, criteria: [...p.criteria, { id: Date.now(), label: '', weight: '', category: '' }] }))
     const updateCriterion = (id, updated) => setForm(p => ({ ...p, criteria: p.criteria.map(c => c.id === id ? updated : c) }))
     const removeCriterion = (id) => setForm(p => ({ ...p, criteria: p.criteria.filter(c => c.id !== id) }))
@@ -133,8 +164,20 @@ export default function Scorecards() {
         header: { background: C.surface, borderBottom: `1px solid ${C.border}` },
     }
 
+    if (loading) return (
+        <Box p="xl" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
+            <Loader color="green" />
+        </Box>
+    )
+
     return (
         <Box>
+            {error && (
+                <Alert icon={<IconAlertCircle size={16} />} color="red" mb={16} onClose={() => setError('')} withCloseButton>
+                    {error}
+                </Alert>
+            )}
+
             <Flex justify="space-between" align="flex-start" mb={24} style={{ flexWrap: 'wrap', gap: 12 }}>
                 <Box>
                     <Title order={2} style={{ color: C.text, fontWeight: 700, fontSize: 22, letterSpacing: '-0.3px' }}>Scorecards</Title>
@@ -146,127 +189,95 @@ export default function Scorecards() {
                 </Button>
             </Flex>
 
-            <Grid gutter={16}>
-                {scorecards.map((card) => (
-                    <Grid.Col key={card.id} span={{ base: 12, sm: 6, lg: 4 }}>
-                        <Paper p={20} radius={12} style={{
-                            border: `1px solid ${C.border}`, background: C.surface,
-                            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                            opacity: card.active ? 1 : 0.6, cursor: 'pointer', transition: 'box-shadow 0.15s',
-                        }}
-                            onClick={() => setViewCard(card)}
-                            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)'}
-                            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'}
-                        >
-                            <Flex justify="space-between" align="flex-start" mb={12}>
-                                <Flex align="center" gap={10}>
-                                    <Box style={{
-                                        width: 36, height: 36, borderRadius: 9, background: '#f0fdf4',
-                                        border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                                    }}>
-                                        <IconClipboardList size={18} color={BRAND} />
-                                    </Box>
-                                    <Box>
-                                        <Text style={{ fontWeight: 700, fontSize: 14, color: C.text, lineHeight: 1.3 }}>{card.name}</Text>
-                                        <Text style={{ fontSize: 11, color: C.subtle, marginTop: 2 }}>{card.team}</Text>
-                                    </Box>
-                                </Flex>
-                                <Menu shadow="md" width={150} position="bottom-end" withinPortal>
-                                    <Menu.Target>
-                                        <ActionIcon variant="subtle" color="gray" radius={6} onClick={(e) => e.stopPropagation()}>
-                                            <IconDotsVertical size={15} />
-                                        </ActionIcon>
-                                    </Menu.Target>
-                                    <Menu.Dropdown style={{ borderRadius: 10, background: C.surface, border: `1px solid ${C.border}` }} onClick={(e) => e.stopPropagation()}>
-                                        <Menu.Item leftSection={<IconEdit size={14} />} style={{ fontSize: 13, color: C.text }} onClick={() => openEdit(card)}>Edit</Menu.Item>
-                                        <Divider style={{ borderColor: C.border }} />
-                                        <Menu.Item color="red" leftSection={<IconTrash size={14} />} style={{ fontSize: 13 }} onClick={() => handleDelete(card.id)}>Delete</Menu.Item>
-                                    </Menu.Dropdown>
-                                </Menu>
-                            </Flex>
-
-                            <Text style={{ fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.5 }}>
-                                {card.description || 'No description'}
-                            </Text>
-
-                            <Divider style={{ borderColor: C.border, marginBottom: 14 }} />
-
-                            <Flex justify="space-between" align="center" mb={14}>
-                                <Flex gap={16}>
-                                    <Box>
-                                        <Text style={{ fontSize: 11, color: C.subtle }}>Criteria</Text>
-                                        <Text style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{card.criteria.length}</Text>
-                                    </Box>
-                                    <Box>
-                                        <Text style={{ fontSize: 11, color: C.subtle }}>Total Points</Text>
-                                        <Text style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{totalPoints(card.criteria)}</Text>
-                                    </Box>
-                                </Flex>
-                                <Badge radius={6} style={{
-                                    background: card.active ? '#f0fdf4' : C.hover,
-                                    color: card.active ? BRAND : C.subtle,
-                                    border: `1px solid ${card.active ? '#bbf7d0' : C.border}`,
-                                    fontWeight: 600, fontSize: 11,
-                                }}>
-                                    {card.active ? 'Active' : 'Inactive'}
-                                </Badge>
-                            </Flex>
-
-                            <Flex align="center" justify="space-between" pt={12}
-                                style={{ borderTop: `1px solid ${C.border}` }} onClick={(e) => e.stopPropagation()}>
-                                <Text style={{ fontSize: 13, color: C.muted }}>{card.active ? 'Disable scorecard' : 'Enable scorecard'}</Text>
-                                <Switch checked={card.active} onChange={() => handleToggle(card.id)} color="green" size="sm" />
-                            </Flex>
-                        </Paper>
-                    </Grid.Col>
-                ))}
-            </Grid>
-
-            {/* View Modal */}
-            {viewCard && (
-                <Modal opened={!!viewCard} onClose={() => setViewCard(null)} size="lg" centered radius={12}
-                    overlayProps={{ blur: 2 }} styles={modalStyles}
-                    title={
-                        <Flex align="center" gap={10}>
-                            <IconClipboardList size={18} color={BRAND} />
-                            <Text style={{ fontWeight: 700, fontSize: 16, color: C.text }}>{viewCard.name}</Text>
-                        </Flex>
-                    }
-                >
-                    <Stack gap={16}>
-                        <Flex gap={10} wrap="wrap">
-                            <Badge style={{ background: '#f0fdf4', color: BRAND, border: '1px solid #bbf7d0', fontWeight: 600 }}>{viewCard.team}</Badge>
-                            <Badge style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', fontWeight: 600 }}>{viewCard.criteria.length} criteria</Badge>
-                            <Badge style={{ background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe', fontWeight: 600 }}>{totalPoints(viewCard.criteria)} pts</Badge>
-                        </Flex>
-                        <Text style={{ fontSize: 13, color: C.muted }}>{viewCard.description}</Text>
-                        <Divider style={{ borderColor: C.border }} />
-                        <Text style={{ fontWeight: 600, fontSize: 14, color: C.text }}>Criteria Breakdown</Text>
-                        <Stack gap={8}>
-                            {viewCard.criteria.map((c, i) => (
-                                <Flex key={c.id} justify="space-between" align="center" p={12}
-                                    style={{ background: C.hover, border: `1px solid ${C.border}`, borderRadius: 8 }}>
+            {scorecards.length === 0 ? (
+                <Paper p={48} radius={12} style={{ border: `1px solid ${C.border}`, background: C.surface, textAlign: 'center' }}>
+                    <IconClipboardList size={40} color={C.subtle} style={{ marginBottom: 12 }} />
+                    <Text style={{ color: C.text, fontWeight: 600, marginBottom: 6 }}>No scorecards yet</Text>
+                    <Text style={{ color: C.muted, fontSize: 14, marginBottom: 20 }}>Create your first scorecard to start scoring calls</Text>
+                    <Button onClick={openCreate} style={{ background: BRAND, color: '#fff', border: 'none' }}>
+                        Create Scorecard
+                    </Button>
+                </Paper>
+            ) : (
+                <Grid gutter={16}>
+                    {scorecards.map((card) => (
+                        <Grid.Col key={card._id} span={{ base: 12, sm: 6, lg: 4 }}>
+                            <Paper p={20} radius={12} style={{
+                                border: `1px solid ${C.border}`, background: C.surface,
+                                boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                                opacity: card.active ? 1 : 0.6,
+                                transition: 'opacity 0.2s',
+                            }}>
+                                <Flex justify="space-between" align="flex-start" mb={12}>
                                     <Flex align="center" gap={10}>
-                                        <Text style={{ fontSize: 11, color: C.subtle, fontWeight: 600, width: 20 }}>{i + 1}.</Text>
+                                        <Box style={{
+                                            width: 36, height: 36, borderRadius: 9,
+                                            background: '#f0fdf4', border: '1px solid #bbf7d0',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <IconClipboardList size={18} color={BRAND} />
+                                        </Box>
                                         <Box>
-                                            <Text style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{c.label}</Text>
-                                            <Text style={{ fontSize: 11, color: C.subtle }}>{c.category}</Text>
+                                            <Text style={{ fontWeight: 700, fontSize: 14, color: C.text, lineHeight: 1.3 }}>{card.name}</Text>
+                                            {card.team && <Text style={{ fontSize: 11, color: C.subtle }}>{card.team}</Text>}
                                         </Box>
                                     </Flex>
-                                    <Badge radius={6} style={{ background: '#f0fdf4', color: BRAND, border: '1px solid #bbf7d0', fontWeight: 700, fontSize: 13 }}>
-                                        {c.weight} pts
+                                    <Menu shadow="md" width={160} position="bottom-end">
+                                        <Menu.Target>
+                                            <ActionIcon variant="subtle" radius={6} style={{ color: C.muted }}>
+                                                <IconDotsVertical size={15} />
+                                            </ActionIcon>
+                                        </Menu.Target>
+                                        <Menu.Dropdown style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+                                            <Menu.Item leftSection={<IconEdit size={13} />} onClick={() => openEdit(card)}
+                                                style={{ fontSize: 13, color: C.text }}>Edit</Menu.Item>
+                                            <Menu.Item leftSection={<IconClipboardList size={13} />} onClick={() => setViewCard(card)}
+                                                style={{ fontSize: 13, color: C.text }}>View Details</Menu.Item>
+                                            <Menu.Divider />
+                                            <Menu.Item leftSection={<IconTrash size={13} />} color="red" onClick={() => handleDelete(card._id)}
+                                                style={{ fontSize: 13 }}>Delete</Menu.Item>
+                                        </Menu.Dropdown>
+                                    </Menu>
+                                </Flex>
+
+                                {card.description && (
+                                    <Text style={{ fontSize: 12, color: C.muted, marginBottom: 12, lineHeight: 1.5 }}>{card.description}</Text>
+                                )}
+
+                                <Flex gap={8} mb={14} style={{ flexWrap: 'wrap' }}>
+                                    <Badge radius={6} style={{ background: '#f0fdf4', color: BRAND, border: '1px solid #bbf7d0', fontSize: 11 }}>
+                                        {card.criteria.length} criteria
+                                    </Badge>
+                                    <Badge radius={6} style={{ background: C.tableTh, color: C.muted, border: `1px solid ${C.border}`, fontSize: 11 }}>
+                                        {totalPoints(card.criteria)} pts total
                                     </Badge>
                                 </Flex>
-                            ))}
-                        </Stack>
-                    </Stack>
-                </Modal>
+
+                                <Divider style={{ borderColor: C.border, marginBottom: 12 }} />
+
+                                <Flex justify="space-between" align="center">
+                                    <Text style={{ fontSize: 12, color: C.subtle }}>
+                                        {card.active ? 'Active' : 'Inactive'}
+                                    </Text>
+                                    <Switch
+                                        checked={card.active}
+                                        onChange={() => handleToggle(card._id)}
+                                        color="green" size="sm"
+                                    />
+                                </Flex>
+                            </Paper>
+                        </Grid.Col>
+                    ))}
+                </Grid>
             )}
 
-            {/* Create/Edit Modal */}
-            <Modal opened={modalOpen} onClose={() => setModalOpen(false)} size="xl" centered radius={12}
-                overlayProps={{ blur: 2 }} styles={modalStyles}
+            {/* ── Create / Edit Modal ── */}
+            <Modal
+                opened={modalOpen}
+                onClose={() => setModalOpen(false)}
+                size="lg"
                 title={<Text style={{ fontWeight: 700, fontSize: 16, color: C.text }}>{editId ? 'Edit Scorecard' : 'Create Scorecard'}</Text>}
+                styles={modalStyles}
             >
                 <Stack gap={16} pt={8}>
                     <Flex gap={12} style={{ flexWrap: 'wrap' }}>
@@ -295,39 +306,83 @@ export default function Scorecards() {
                             Add Criterion
                         </Button>
                     </Flex>
-                    <Flex gap={10} px={24}>
-                        {['Label', 'Points', 'Category'].map(h => (
-                            <Text key={h} style={{ fontSize: 11, color: C.subtle, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', flex: h === 'Label' ? 2 : h === 'Points' ? undefined : undefined, width: h === 'Points' ? 80 : h === 'Category' ? 160 : undefined }}>
-                                {h}
-                            </Text>
-                        ))}
-                    </Flex>
+
                     <Stack gap={8}>
                         {form.criteria.map((c) => (
-                            <CriteriaRow key={c.id} criterion={c} C={C}
+                            <CriteriaRow
+                                key={c.id}
+                                criterion={c}
                                 onChange={(updated) => updateCriterion(c.id, updated)}
                                 onRemove={() => removeCriterion(c.id)}
                                 showRemove={form.criteria.length > 1}
+                                C={C}
                             />
                         ))}
                     </Stack>
+
                     <Divider style={{ borderColor: C.border }} />
                     <Flex justify="space-between" align="center">
-                        <Flex align="center" gap={8}>
-                            <Switch checked={form.active} onChange={() => setForm(p => ({ ...p, active: !p.active }))} color="green" size="sm" />
-                            <Text style={{ fontSize: 13, color: C.text }}>Active</Text>
-                        </Flex>
-                        <Flex gap={10}>
-                            <Button variant="default" radius={8} onClick={() => setModalOpen(false)}
-                                style={{ border: `1px solid ${C.inputBorder}`, color: C.text, fontWeight: 500 }}>Cancel</Button>
-                            <Button radius={8} onClick={handleSave}
-                                style={{ background: BRAND, color: '#fff', fontWeight: 600, border: 'none' }}>
-                                {editId ? 'Save Changes' : 'Create Scorecard'}
-                            </Button>
-                        </Flex>
+                        <Box>
+                            <Text style={{ fontSize: 14, fontWeight: 500, color: C.text }}>Active</Text>
+                            <Text style={{ fontSize: 12, color: C.subtle }}>Inactive scorecards won't appear when uploading calls</Text>
+                        </Box>
+                        <Switch checked={form.active} onChange={() => setForm(p => ({ ...p, active: !p.active }))} color="green" size="md" />
+                    </Flex>
+
+                    <Flex gap={10} justify="flex-end" mt={8}>
+                        <Button variant="default" radius={8} onClick={() => setModalOpen(false)}
+                            style={{ border: `1px solid ${C.border}`, color: C.text, background: C.surface }}>
+                            Cancel
+                        </Button>
+                        <Button radius={8} loading={saving} onClick={handleSave}
+                            style={{ background: BRAND, color: '#fff', border: 'none', fontWeight: 600 }}>
+                            {editId ? 'Save Changes' : 'Create Scorecard'}
+                        </Button>
                     </Flex>
                 </Stack>
             </Modal>
+
+            {/* ── View Details Modal ── */}
+            {viewCard && (
+                <Modal
+                    opened={!!viewCard}
+                    onClose={() => setViewCard(null)}
+                    size="md"
+                    title={<Text style={{ fontWeight: 700, fontSize: 16, color: C.text }}>{viewCard.name}</Text>}
+                    styles={modalStyles}
+                >
+                    <Stack gap={12} pt={4}>
+                        {viewCard.description && (
+                            <Text style={{ fontSize: 13, color: C.muted }}>{viewCard.description}</Text>
+                        )}
+                        <Divider style={{ borderColor: C.border }} />
+                        <Flex justify="space-between" mb={4}>
+                            <Text style={{ fontSize: 12, fontWeight: 600, color: C.subtle, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Criterion</Text>
+                            <Flex gap={40}>
+                                <Text style={{ fontSize: 12, fontWeight: 600, color: C.subtle, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pts</Text>
+                                <Text style={{ fontSize: 12, fontWeight: 600, color: C.subtle, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</Text>
+                            </Flex>
+                        </Flex>
+                        {viewCard.criteria.map((c, i) => (
+                            <Flex key={i} justify="space-between" align="center" py={10}
+                                style={{ borderTop: `1px solid ${C.border}` }}>
+                                <Text style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{c.label}</Text>
+                                <Flex gap={40} align="center">
+                                    <Text style={{ fontSize: 13, fontWeight: 700, color: BRAND, minWidth: 24, textAlign: 'right' }}>{c.weight}</Text>
+                                    <Badge radius={6} style={{ background: C.tableTh, color: C.muted, border: `1px solid ${C.border}`, fontSize: 11, minWidth: 100, textAlign: 'center' }}>
+                                        {c.category}
+                                    </Badge>
+                                </Flex>
+                            </Flex>
+                        ))}
+                        <Divider style={{ borderColor: C.border }} />
+                        <Flex justify="space-between">
+                            <Text style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Total</Text>
+                            <Text style={{ fontSize: 13, fontWeight: 700, color: BRAND }}>{totalPoints(viewCard.criteria)} pts</Text>
+                        </Flex>
+                    </Stack>
+                </Modal>
+            )}
         </Box>
     )
 }

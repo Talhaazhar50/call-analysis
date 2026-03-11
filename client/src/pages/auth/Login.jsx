@@ -5,8 +5,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 import {
-  IconBrandApple, IconBrandGoogle, IconBrandWindows,
-  IconBuilding, IconFingerprint, IconHeadphones
+  // IconBrandApple,
+  IconBrandGoogle,
+  // IconBrandWindows,
+  // IconBuilding,
+  IconFingerprint, IconHeadphones
 } from "@tabler/icons-react";
 
 import {
@@ -19,9 +22,9 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 const socialButtons = [
   { icon: IconBrandGoogle, label: 'Google' },
-  { icon: IconBrandApple, label: 'Apple' },
-  { icon: IconBrandWindows, label: 'Microsoft' },
-  { icon: IconBuilding, label: 'SSO' },
+  // { icon: IconBrandApple, label: 'Apple' },       // coming soon
+  // { icon: IconBrandWindows, label: 'Microsoft' }, // coming soon
+  // { icon: IconBuilding, label: 'SSO' },           // coming soon
   { icon: IconFingerprint, label: 'Passkey' },
 ]
 
@@ -124,14 +127,12 @@ export default function Login() {
   }
 
   const handleGoogle = () => {
-    // Redirect browser to backend — passport handles the OAuth dance
     window.location.href = `${API}/auth/google`
   }
 
   const handleSocialClick = (label) => {
     if (label === 'Passkey') return handlePasskey()
     if (label === 'Google') return handleGoogle()
-    // Apple, Microsoft, SSO — coming soon
   }
 
   const inputStyles = {
@@ -174,26 +175,9 @@ export default function Login() {
             <>
               <Text size="xs" ta="center" style={{ color: '#9ca3af', marginBottom: 12 }}>Log in with</Text>
 
-              {/* Google, Apple, Microsoft */}
-              <Flex gap={10} mb={10}>
-                {socialButtons.slice(0, 3).map((s) => (
-                  <Button
-                    key={s.label} fullWidth variant="default" radius={8}
-                    onClick={() => handleSocialClick(s.label)}
-                    style={{
-                      border: s.label === 'Google' ? '1px solid #e5e7eb' : '1px solid #e5e7eb',
-                      background: '#fff',
-                      color: '#374151', fontWeight: 500, fontSize: 13,
-                      height: 52, display: 'flex', flexDirection: 'column', gap: 4
-                    }}>
-                    <s.icon size={20} /><span>{s.label}</span>
-                  </Button>
-                ))}
-              </Flex>
-
-              {/* SSO, Passkey */}
+              {/* Google + Passkey */}
               <Flex gap={10} mb={8}>
-                {socialButtons.slice(3).map((s) => (
+                {socialButtons.map((s) => (
                   <Button
                     key={s.label} fullWidth variant="default" radius={8}
                     onClick={() => handleSocialClick(s.label)}
@@ -219,7 +203,7 @@ export default function Login() {
                 </Text>
               </Flex>
 
-              {/* Error shown above divider */}
+              {/* Error */}
               {error && (
                 <Text size="sm" ta="center" style={{ color: '#dc2626', marginBottom: 12 }}>
                   {error}
