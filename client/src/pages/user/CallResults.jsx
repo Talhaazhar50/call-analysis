@@ -63,9 +63,7 @@ export default function CallResults() {
                         </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <button onClick={toggleCoached} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, background: call.coached ? (dark ? '#1e293b' : '#f1f5f9') : 'transparent', color: call.coached ? C.text : C.muted, border: `1px solid ${C.border}`, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                            {call.coached ? '✓ Coached' : 'Mark Coached'}
-                        </button>
+                       
                         <div style={{ textAlign: 'right' }}>
                             <div style={{ fontSize: 40, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>{call.percentage}%</div>
                             <div style={{ fontSize: 12, color: C.muted }}>{total}/{max} pts</div>

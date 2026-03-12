@@ -30,6 +30,40 @@ function Avatar({ name = '', size = 32 }) {
     )
 }
 
+function exportToCSV(calls) {
+    const headers = ['Agent Name', 'Agent Email', 'File', 'Date', 'Time', 'Scorecard', 'Score (%)', 'Status', 'Coached']
+    const rows = calls.map(call => {
+        const agentName = call.user?.name || call.user?.email?.split('@')[0] || 'Unknown'
+        const agentEmail = call.user?.email || ''
+        const date = new Date(call.createdAt)
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        return [
+            agentName,
+            agentEmail,
+            call.fileName || '',
+            dateStr,
+            timeStr,
+            call.scorecardName || '',
+            call.percentage ?? '',
+            call.pass ? 'Pass' : 'Fail',
+            call.coached ? 'Coached' : 'Pending',
+        ]
+    })
+
+    const csvContent = [headers, ...rows]
+        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `calls-export-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+}
+
 export default function Calls() {
     const { C } = useOutletContext()
     const [calls, setCalls] = useState([])
@@ -114,8 +148,13 @@ export default function Calls() {
                         View and analyze all recorded calls · {notCoachedCount} pending coaching
                     </Text>
                 </Box>
-                <Button leftSection={<IconDownload size={15} />} radius={8} variant="default"
-                    style={{ border: `1px solid ${C.inputBorder}`, color: C.text, fontWeight: 600, fontSize: 14, height: 40, background: C.surface }}>
+                <Button
+                    leftSection={<IconDownload size={15} />}
+                    radius={8}
+                    variant="default"
+                    onClick={() => exportToCSV(filtered)}
+                    style={{ border: `1px solid ${C.inputBorder}`, color: C.text, fontWeight: 600, fontSize: 14, height: 40, background: C.surface }}
+                >
                     Export CSV
                 </Button>
             </Flex>

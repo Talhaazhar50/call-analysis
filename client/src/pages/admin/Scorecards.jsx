@@ -14,12 +14,101 @@ import {
 
 const BRAND = '#16a34a'
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
-const teamOptions = ['Operations', 'Finance', 'HR', 'Engineering', 'Support'].map(v => ({ value: v, label: v }))
+
+const DEFAULT_TEAMS = ['Operations', 'Finance', 'HR', 'Engineering', 'Support', 'Sales']
 const categoryOptions = ['Communication', 'Compliance', 'Product Knowledge', 'Process', 'General'].map(v => ({ value: v, label: v }))
 
 const emptyForm = {
     name: '', description: '', team: '', active: true,
     criteria: [{ id: Date.now(), label: '', weight: '', category: '' }],
+}
+
+function CreatableTeamSelect({ value, onChange, C }) {
+    const [teams, setTeams] = useState(() => {
+        try {
+            const saved = localStorage.getItem('scorecard_teams')
+            return saved ? JSON.parse(saved) : DEFAULT_TEAMS
+        } catch {
+            return DEFAULT_TEAMS
+        }
+    })
+    const [newTeam, setNewTeam] = useState('')
+    const [showAdd, setShowAdd] = useState(false)
+
+    const saveTeams = (updated) => {
+        setTeams(updated)
+        localStorage.setItem('scorecard_teams', JSON.stringify(updated))
+    }
+
+    const handleAddTeam = () => {
+        const trimmed = newTeam.trim()
+        if (!trimmed || teams.includes(trimmed)) {
+            setNewTeam('')
+            setShowAdd(false)
+            return
+        }
+        const updated = [...teams, trimmed]
+        saveTeams(updated)
+        onChange(trimmed)
+        setNewTeam('')
+        setShowAdd(false)
+    }
+
+    const teamOptions = teams.map(t => ({ value: t, label: t }))
+
+    return (
+        <Box style={{ minWidth: 160 }}>
+            <Text style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 6 }}>Assign to Team</Text>
+            {showAdd ? (
+                <Flex gap={6} align="center">
+                    <TextInput
+                        placeholder="New team name"
+                        value={newTeam}
+                        onChange={(e) => setNewTeam(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAddTeam()
+                            if (e.key === 'Escape') { setShowAdd(false); setNewTeam('') }
+                        }}
+                        autoFocus
+                        style={{ flex: 1 }}
+                        styles={{ input: { background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: 8, height: 42, fontSize: 14 } }}
+                    />
+                    <Button size="xs" radius={6} onClick={handleAddTeam}
+                        style={{ background: BRAND, color: '#fff', border: 'none', height: 42, paddingInline: 12 }}>
+                        Add
+                    </Button>
+                    <ActionIcon variant="subtle" color="gray" radius={6} style={{ height: 42, width: 36 }}
+                        onClick={() => { setShowAdd(false); setNewTeam('') }}>
+                        <IconX size={14} />
+                    </ActionIcon>
+                </Flex>
+            ) : (
+                <Flex gap={6} align="center">
+                    <Select
+                        placeholder="Select team"
+                        data={teamOptions}
+                        value={value}
+                        onChange={(v) => onChange(v || '')}
+                        clearable
+                        style={{ flex: 1 }}
+                        styles={{ input: { background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, borderRadius: 8, height: 42, fontSize: 14 } }}
+                    />
+                    <ActionIcon
+                        variant="subtle"
+                        radius={6}
+                        title="Add new team"
+                        onClick={() => setShowAdd(true)}
+                        style={{
+                            height: 42, width: 42, flexShrink: 0,
+                            border: `1px solid ${C.inputBorder}`,
+                            background: C.inputBg, color: BRAND,
+                        }}>
+                        <IconPlus size={16} />
+                    </ActionIcon>
+                </Flex>
+            )}
+        </Box>
+    )
 }
 
 function CriteriaRow({ criterion, onChange, onRemove, showRemove, C }) {
@@ -71,7 +160,6 @@ export default function Scorecards() {
     const token = localStorage.getItem('token')
     const headers = { Authorization: `Bearer ${token}` }
 
-    // ── Fetch all scorecards ──
     const fetchScorecards = async () => {
         try {
             setLoading(true)
@@ -280,13 +368,15 @@ export default function Scorecards() {
                 styles={modalStyles}
             >
                 <Stack gap={16} pt={8}>
-                    <Flex gap={12} style={{ flexWrap: 'wrap' }}>
+                    <Flex gap={12} style={{ flexWrap: 'wrap' }} align="flex-end">
                         <TextInput label="Scorecard Name" placeholder="e.g. Sales QA Scorecard"
                             value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
                             style={{ flex: 1, minWidth: 200 }} styles={inputStyles} />
-                        <Select label="Assign to Team" placeholder="Select team" data={teamOptions}
-                            value={form.team} onChange={(v) => setForm(p => ({ ...p, team: v || '' }))}
-                            style={{ minWidth: 160 }} styles={inputStyles} />
+                        <CreatableTeamSelect
+                            value={form.team}
+                            onChange={(v) => setForm(p => ({ ...p, team: v }))}
+                            C={C}
+                        />
                     </Flex>
                     <Textarea label="Description" placeholder="Describe what this scorecard is used for"
                         value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
