@@ -28,7 +28,7 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  if (/\.(mp3|wav|m4a|ogg|flac|webm)$/i.test(path.extname(file.originalname)))
+  if (/\.(mp3|wav|m4a|ogg|flac|webm|mpeg)$/i.test(path.extname(file.originalname)))
     cb(null, true);
   else
     cb(new Error("Only audio files allowed (mp3, wav, m4a, ogg, flac, webm)"));

@@ -2,13 +2,13 @@ import "express-async-errors";
 import "./config,/Env.js";
 import authRoutes from "./routes/auth.routes.js";
 import callRoutes from "./routes/Call.routes.js";
+import settingsRoutes from "./routes/Setting.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import morgan from "morgan";
 import passport from "passport";
 import scorecardRoutes from "./routes/Scorecard.routes.js";
-import userRoutes from "./routes/user.routes.js";
 import { connectDB } from "./config,/db.js";
 import { initGoogleStrategy } from "./controllers/Google.controller.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -31,7 +31,7 @@ app.use(passport.initialize());
 app.use("/api/auth", authRoutes);
 app.use("/api/scorecards", scorecardRoutes);
 app.use("/api/calls", callRoutes);
-app.use("/api/users", userRoutes);
+app.use("/api/settings", settingsRoutes);
 
 app.use(errorHandler);
 

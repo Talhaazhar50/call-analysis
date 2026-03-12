@@ -39,12 +39,20 @@ export default function UploadCall() {
 
     useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current) }, [])
 
-    const handleFile = (f) => {
-        if (!f) return
-        if (!f.name.match(/\.(mp3|wav|m4a|ogg|flac|webm)$/i)) { setError('Please upload an audio file (mp3, wav, m4a, ogg, flac, webm)'); return }
-        setError(''); setFile(f)
+const handleFile = (f) => {
+    if (!f) return
+    const validExt = /\.(mp3|wav|m4a|ogg|flac|webm)$/i.test(f.name)
+    const validMime = f.type.startsWith('audio/') || 
+                      f.type === 'video/webm' || 
+                      f.type === 'video/mpeg' ||
+                      f.type === 'audio/mpeg' ||
+                      f.type === ''  // some files report no MIME type
+    if (!validExt && !validMime) { 
+        setError('Please upload an audio file (mp3, wav, m4a, ogg, flac, webm, mpeg)') 
+        return 
     }
-
+    setError(''); setFile(f)
+}
     const startPolling = (id) => {
         let ticks = 0
         pollRef.current = setInterval(async () => {
