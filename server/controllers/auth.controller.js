@@ -1,66 +1,58 @@
 import User from "../models/User.model.js";
-import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { sendOTPEmail } from "../services/email.service.js";
 
-const generateOTP = () => crypto.randomInt(100000, 999999).toString();
-
-const signToken = (user) =>
+const generateToken = (user) =>
   jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
+    expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
 
-// POST /api/auth/send-code
+// ── Step 1: Send OTP ──────────────────────────────────────────────────────────
 export const sendCode = async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: "Email is required" });
 
-  let user = await User.findOne({ email });
-
-  // Auto-create user if not found (first time login)
+  // Find OR create — never duplicate
+  let user = await User.findOne({ email: email.toLowerCase().trim() });
   if (!user) {
-    const name = email.split("@")[0];
-    user = await User.create({ name, email, role: "user" });
+    user = await User.create({
+      email: email.toLowerCase().trim(),
+      name: email.split("@")[0],
+      role: "user",
+      isActive: true,
+    });
   }
 
-  if (!user.isActive) {
-    return res
-      .status(403)
-      .json({ message: "Your account has been deactivated" });
-  }
-
-  const otp = generateOTP();
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
   user.otp = otp;
-  user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+  user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min
   await user.save();
 
-  await sendOTPEmail(email, otp);
+  await sendOTPEmail(user.email, otp);
 
-  res.json({ message: "Code sent to your email" });
+  res.json({ message: "OTP sent" });
 };
 
-// POST /api/auth/verify-code
+// ── Step 2: Verify OTP ────────────────────────────────────────────────────────
 export const verifyCode = async (req, res) => {
   const { email, otp } = req.body;
   if (!email || !otp)
-    return res.status(400).json({ message: "Email and code are required" });
+    return res.status(400).json({ message: "Email and OTP are required" });
 
-  const user = await User.findOne({ email });
-
+  const user = await User.findOne({ email: email.toLowerCase().trim() });
   if (!user) return res.status(404).json({ message: "User not found" });
-  if (!user.otp || !user.otpExpiry)
-    return res.status(400).json({ message: "No code requested" });
-  if (new Date() > user.otpExpiry)
-    return res.status(400).json({ message: "Code expired" });
-  if (user.otp !== otp)
-    return res.status(400).json({ message: "Invalid code" });
+
+  if (user.otp !== otp) return res.status(401).json({ message: "Invalid OTP" });
+  if (user.otpExpiry < new Date())
+    return res.status(401).json({ message: "OTP expired" });
 
   // Clear OTP
   user.otp = null;
   user.otpExpiry = null;
+  user.isActive = true;
   await user.save();
 
-  const token = signToken(user);
+  const token = generateToken(user);
 
   res.json({
     token,
@@ -73,12 +65,11 @@ export const verifyCode = async (req, res) => {
   });
 };
 
-// GET /api/auth/me
+// ── Get current user ──────────────────────────────────────────────────────────
 export const getMe = async (req, res) => {
-  res.json({
-    id: req.user._id,
-    name: req.user.name,
-    email: req.user.email,
-    role: req.user.role,
-  });
+  const user = await User.findById(req.user.id).select(
+    "-otp -otpExpiry -passkeys -currentChallenge",
+  );
+  if (!user) return res.status(404).json({ message: "User not found" });
+  res.json(user);
 };

@@ -3,98 +3,78 @@ import jwt from "jsonwebtoken";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
-const signToken = (user) =>
-  jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
-  });
-
 export const initGoogleStrategy = () => {
   passport.use(
     new GoogleStrategy(
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL:
-          process.env.GOOGLE_CALLBACK_URL ||
-          "http://localhost:8000/api/auth/google/callback",
+        callbackURL: process.env.GOOGLE_CALLBACK_URL,
       },
-      async (_accessToken, _refreshToken, profile, done) => {
+      async (accessToken, refreshToken, profile, done) => {
         try {
-          const email = profile.emails?.[0]?.value;
-          if (!email) return done(new Error("No email from Google"), null);
+          const email = profile.emails?.[0]?.value?.toLowerCase().trim();
+          if (!email) return done(new Error("No email from Google"));
 
-          // Find existing user by googleId or email
-          let user = await User.findOne({
-            $or: [{ googleId: profile.id }, { email }],
-          });
+          // Find by googleId first, then email — never duplicate
+          let user = await User.findOne({ googleId: profile.id });
+          if (!user) user = await User.findOne({ email });
 
-          if (user) {
-            // Attach googleId if they previously signed up via OTP
+          if (!user) {
+            user = await User.create({
+              email,
+              name: profile.displayName || email.split("@")[0],
+              googleId: profile.id,
+              isActive: true,
+              role: "user",
+            });
+          } else {
             if (!user.googleId) {
               user.googleId = profile.id;
               await user.save();
             }
-            if (!user.isActive)
-              return done(new Error("Account deactivated"), null);
-          } else {
-            // Auto-create account on first Google login
-            user = await User.create({
-              name: profile.displayName || email.split("@")[0],
-              email,
-              googleId: profile.id,
-              role: "user",
-            });
           }
 
           return done(null, user);
         } catch (err) {
-          return done(err, null);
+          return done(err);
         }
       },
     ),
   );
-
-  // Minimal serialize/deserialize (we use JWT, not sessions)
-  passport.serializeUser((user, done) => done(null, user._id));
-  passport.deserializeUser(async (id, done) => {
-    try {
-      const user = await User.findById(id);
-      done(null, user);
-    } catch (err) {
-      done(err, null);
-    }
-  });
 };
 
-// GET /api/auth/google  — kick off OAuth flow
-export const googleAuth = passport.authenticate("google", {
-  scope: ["profile", "email"],
-  session: false,
-});
+// Lazily calls passport so strategy is already registered
+export const googleAuth = (req, res, next) =>
+  passport.authenticate("google", { scope: ["profile", "email"] })(
+    req,
+    res,
+    next,
+  );
 
-// GET /api/auth/google/callback  — Google redirects here
 export const googleCallback = (req, res, next) => {
   passport.authenticate("google", { session: false }, (err, user) => {
-    const FRONTEND = process.env.CLIENT_URL || "http://localhost:5173";
-
     if (err || !user) {
-      const msg = err?.message || "Google login failed";
-      return res.redirect(`${FRONTEND}/login?error=${encodeURIComponent(msg)}`);
+      const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+      return res.redirect(`${clientUrl}/login?error=google_failed`);
     }
 
-    const token = signToken(user);
-    const userData = encodeURIComponent(
-      JSON.stringify({
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      }),
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" },
     );
 
-    // Redirect to frontend callback page with token + user in query params
+    const userData = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
     res.redirect(
-      `${FRONTEND}/auth/google/callback?token=${token}&user=${userData}`,
+      `${clientUrl}/auth/google/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userData))}`,
     );
   })(req, res, next);
 };

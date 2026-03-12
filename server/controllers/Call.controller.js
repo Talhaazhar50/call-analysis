@@ -115,7 +115,11 @@ export const getCall = async (req, res) => {
 
 // PATCH /api/calls/:id/coached
 export const toggleCoached = async (req, res) => {
-  const call = await Call.findOne({ _id: req.params.id, user: req.user._id });
+  const isAdmin = req.user.role === "admin";
+  const query = isAdmin
+    ? { _id: req.params.id }
+    : { _id: req.params.id, user: req.user._id };
+  const call = await Call.findOne(query);
   if (!call) return res.status(404).json({ message: "Call not found" });
   call.coached = !call.coached;
   await call.save();
@@ -137,7 +141,7 @@ export const deleteCall = async (req, res) => {
 export const getAllCalls = async (req, res) => {
   const calls = await Call.find()
     .sort({ createdAt: -1 })
-    .select("-transcript -transcriptRaw -criteriaResults")
+    .select("-transcript -transcriptRaw")
     .populate("user", "name email");
   res.json(calls);
 };
