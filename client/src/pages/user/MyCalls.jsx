@@ -1,6 +1,6 @@
 import axios from "axios";
 import { Alert, Box, Loader, Text } from "@mantine/core";
-import { IconAlertCircle } from "@tabler/icons-react";
+import { IconAlertCircle, IconMessageCircle } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
@@ -108,7 +108,18 @@ export default function MyCalls() {
                                         <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, background: call.pass ? '#f0fdf4' : '#fef2f2', color: call.pass ? BRAND : '#ef4444', border: `1px solid ${call.pass ? '#bbf7d0' : '#fecaca'}` }}>
                                             {call.pass ? 'PASS' : 'FAIL'}
                                         </span>
-                                        {call.coached && <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: dark ? '#1e293b' : '#f1f5f9', color: C.muted, border: `1px solid ${C.border}` }}>Coached</span>}
+                                        {call.coached && (
+                                            <span style={{
+                                                display: 'flex', alignItems: 'center', gap: 4,
+                                                padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 500,
+                                                background: dark ? '#0f172a' : '#f8fafc',
+                                                color: C.muted,
+                                                border: `1px solid ${C.border}`,
+                                            }}>
+                                                <IconMessageCircle size={12} />
+                                                Feedback available
+                                            </span>
+                                        )}
                                     </>
                                 ) : call.status === 'failed' ? (
                                     <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca' }}>Failed</span>
