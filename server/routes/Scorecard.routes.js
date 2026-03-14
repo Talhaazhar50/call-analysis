@@ -8,7 +8,7 @@ import {
   updateScorecard,
   toggleScorecard,
   deleteScorecard,
-} from "../controllers/scorecard.controller.js";
+} from "../controllers/Scorecard.controller.js";
 
 const router = express.Router();
 
