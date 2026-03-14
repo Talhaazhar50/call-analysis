@@ -6,7 +6,7 @@ import ffprobe from "ffprobe-static";
 import fs from "fs";
 import { execSync } from "child_process";
 import { scoreTranscript } from "../services/scoring.service.js";
-import { transcribeAudio } from "../services/transcription.service.js";
+import { transcribeAudio } from "../services/Transcription.service.js";
 import {
   sendCallScoredEmail,
   sendCallFailedEmail,
