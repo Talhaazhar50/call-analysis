@@ -12,7 +12,7 @@ import {
   toggleCoached,
   deleteCall,
   getAllCalls,
-} from "../controllers/call.controller.js";
+} from "../controllers/Call.controller.js";
 
 const router = express.Router();
 
